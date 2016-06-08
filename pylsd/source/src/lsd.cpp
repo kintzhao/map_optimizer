@@ -653,20 +653,31 @@ static image_double gaussian_sampler( image_double in, double scale,
     - a pointer 'mem_p' to the memory used by 'list_p' to be able to
       free the memory when it is not used anymore.
  */
+/**
+ * @brief ll_angle
+ * @param in               image
+ * @param threshold
+ * @param list_p           the start addres for odered link coorlist
+ * @param mem_p
+ * @param modgrad          gradients of image
+ * @param n_bins               1024
+ * @param max_grad
+ * @return
+ */
 static image_double ll_angle( image_double in, double threshold,
                               struct coorlist **list_p, void **mem_p,
                               image_double *modgrad, unsigned int n_bins,
                               double max_grad )
 {
     image_double g;
-    unsigned int n, p, x, y, adr, i;
+    unsigned int size_y, size_x, x, y, adr, i;
     double com1, com2, gx, gy, norm, norm2;
     /* the rest of the variables are used for pseudo-ordering
        the gradient magnitude values */
     int list_count = 0;
     struct coorlist *list;
-    struct coorlist **range_l_s;  /* array of pointers to start of bin list */
-    struct coorlist **range_l_e;  /* array of pointers to end of bin list */
+    struct coorlist **range_l_start;  /* array of pointers to start of bin list */
+    struct coorlist **range_l_end;  /* array of pointers to end of bin list */
     struct coorlist *start;
     struct coorlist *end;
 
@@ -681,8 +692,8 @@ static image_double ll_angle( image_double in, double threshold,
     if ( max_grad <= 0.0 ) error("ll_angle: 'max_grad' must be positive.");
 
     /* image size shortcuts */
-    n = in->ysize;
-    p = in->xsize;
+    size_y = in->ysize;
+    size_x = in->xsize;
 
     /* allocate output image */
     g = new_image_double(in->xsize, in->ysize);
@@ -691,25 +702,25 @@ static image_double ll_angle( image_double in, double threshold,
     *modgrad = new_image_double(in->xsize, in->ysize);
 
     /* get memory for "ordered" list of pixels */
-    list = (struct coorlist *) calloc( (size_t) (n * p), sizeof(struct coorlist) );
+    list = (struct coorlist *) calloc( (size_t) (size_y * size_x), sizeof(struct coorlist) );
     *mem_p = (void *) list;
-    range_l_s = (struct coorlist **) calloc( (size_t) n_bins,
+    range_l_start = (struct coorlist **) calloc( (size_t) n_bins,
                 sizeof(struct coorlist *) );
-    range_l_e = (struct coorlist **) calloc( (size_t) n_bins,
+    range_l_end = (struct coorlist **) calloc( (size_t) n_bins,
                 sizeof(struct coorlist *) );
-    if ( list == NULL || range_l_s == NULL || range_l_e == NULL )
+    if ( list == NULL || range_l_start == NULL || range_l_end == NULL )
         error("not enough memory.");
-    for (i = 0; i < n_bins; i++) range_l_s[i] = range_l_e[i] = NULL;
+    for (i = 0; i < n_bins; i++) range_l_start[i] = range_l_end[i] = NULL;
 
     /* 'undefined' on the down and right boundaries */
-    for (x = 0; x < p; x++) g->data[(n - 1)*p + x] = NOTDEF;
-    for (y = 0; y < n; y++) g->data[p * y + p - 1]   = NOTDEF;
+    for (x = 0; x < size_x; x++) g->data[(size_y - 1)*size_x + x] = NOTDEF; //top
+    for (y = 0; y < size_y; y++) g->data[size_x * y + size_x - 1]   = NOTDEF;//right
 
     /* compute gradient on the remaining pixels */
-    for (x = 0; x < p - 1; x++)
-        for (y = 0; y < n - 1; y++)
+    for (x = 0; x < size_x - 1; x++)
+        for (y = 0; y < size_y - 1; y++)
         {
-            adr = y * p + x;
+            adr = y * size_x + x;
 
             /*
                Norm 2 computation using 2x2 pixel window:
@@ -722,8 +733,8 @@ static image_double ll_angle( image_double in, double threshold,
                  gy = C+D - (A+B)   vertical difference
                com1 and com2 are just to avoid 2 additions.
              */
-            com1 = in->data[adr + p + 1] - in->data[adr];
-            com2 = in->data[adr + 1]   - in->data[adr + p];
+            com1 = in->data[adr + size_x + 1] - in->data[adr];   //(x+1, y+1) - (x,y)
+            com2 = in->data[adr + 1]   - in->data[adr + size_x]; // (x+1,y) - (x,y+1)
 
             gx = com1 + com2; /* gradient x component */
             gy = com1 - com2; /* gradient y component */
@@ -737,21 +748,21 @@ static image_double ll_angle( image_double in, double threshold,
             else
             {
                 /* gradient angle computation */
-                g->data[adr] = atan2(gx, -gy);
+                g->data[adr] = atan2(gx, -gy);     //store gradient angle
 
                 /* store the point in the right bin according to its norm */
-                i = (unsigned int) (norm * (double) n_bins / max_grad);
+                i = (unsigned int) (norm * (double) n_bins / max_grad); //max_grad
                 if ( i >= n_bins ) i = n_bins - 1;
-                if ( range_l_e[i] == NULL )
-                    range_l_s[i] = range_l_e[i] = list + list_count++;
+                if ( range_l_end[i] == NULL )
+                    range_l_start[i] = range_l_end[i] = list + list_count++;
                 else
                 {
-                    range_l_e[i]->next = list + list_count;
-                    range_l_e[i] = list + list_count++;
+                    range_l_end[i]->next = list + list_count;
+                    range_l_end[i] = list + list_count++;
                 }
-                range_l_e[i]->x = (int) x;
-                range_l_e[i]->y = (int) y;
-                range_l_e[i]->next = NULL;
+                range_l_end[i]->x = (int) x;
+                range_l_end[i]->y = (int) y;
+                range_l_end[i]->next = NULL;
             }
         }
 
@@ -760,21 +771,21 @@ static image_double ll_angle( image_double in, double threshold,
        pixels with higher gradient value. Pixels would be ordered
        by norm value, up to a precision given by max_grad/n_bins.
      */
-    for (i = n_bins - 1; i > 0 && range_l_s[i] == NULL; i--);
-    start = range_l_s[i];
-    end = range_l_e[i];
+    for (i = n_bins - 1; i > 0 && range_l_start[i] == NULL; i--); //use the gradient max bin
+    start = range_l_start[i];
+    end = range_l_end[i];
     if ( start != NULL )
         for (i--; i > 0; i--)
-            if ( range_l_s[i] != NULL )
+            if ( range_l_start[i] != NULL )
             {
-                end->next = range_l_s[i];
-                end = range_l_e[i];
+                end->next = range_l_start[i];
+                end = range_l_end[i];
             }
-    *list_p = start;
+    *list_p = start; // ordered links
 
     /* free memory */
-    free( (void *) range_l_s );
-    free( (void *) range_l_e );
+    free( (void *) range_l_start );
+    free( (void *) range_l_end );
 
     return g;
 }
@@ -1997,10 +2008,9 @@ ntuple_list LineSegmentDetection( image_double image, double scale,
             /* construct rectangular approximation for the region */
             region2rect(reg, reg_size, modgrad, reg_angle, prec, p, &rec);
 
-            /* Check if the rectangle exceeds the minimal density of
-               region points. If not, try to improve the region.
-               The rectangle will be rejected if the final one does
-               not fulfill the minimal density condition.
+            /* Check if the rectangle exceeds the minimal density of region points.
+             *  If not, try to improve the region.
+               The rectangle will be rejected if the final one does not fulfill the minimal density condition.
                This is an addition to the original LSD algorithm published in
                "LSD: A Fast Line Segment Detector with a False Detection Control"
                by R. Grompone von Gioi, J. Jakubowicz, J.M. Morel, and G. Randall.

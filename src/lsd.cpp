@@ -1593,6 +1593,17 @@ static void region2rect( struct point *reg, int reg_size,
 /** Build a region of pixels that share the same angle, up to a
     tolerance 'prec', starting at point (x,y).
  */
+/**
+ * @brief region_grow
+ * @param x             current_x
+ * @param y             current_y
+ * @param angles        current_angle
+ * @param reg           region for add point
+ * @param reg_size      region size
+ * @param reg_angle
+ * @param used
+ * @param prec
+ */
 static void region_grow( int x, int y, image_double angles, struct point *reg,
                          int *reg_size, double *reg_angle, image_char used,
                          double prec )
@@ -2061,7 +2072,7 @@ ntuple_list lsd_scale(image_double image, double scale)
                                 sigma = sigma_scale/scale.                    */
     double quant = 2.0;       /* Bound to the quantization error on the
                                 gradient norm.                                */
-    double ang_th = 22.5;     /* Gradient angle tolerance in degrees.           */
+    double ang_th = 45;//22.5;     /* Gradient angle tolerance in degrees.           */
     double eps = 0.0;         /* Detection threshold, -log10(NFA).              */
     double density_th = 0.7;  /* Minimal density of region points in rectangle. */
     int n_bins = 1024;        /* Number of bins in pseudo-ordering of gradient

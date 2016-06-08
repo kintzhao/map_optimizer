@@ -1,0 +1,2 @@
+/usr/bin/ar cr lib/liblsd.a  CMakeFiles/lsd.dir/src/lsd.cpp.o
+/usr/bin/ranlib lib/liblsd.a
