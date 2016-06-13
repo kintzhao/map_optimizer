@@ -657,7 +657,7 @@ static image_double gaussian_sampler( image_double in, double scale,
  * @brief ll_angle
  * @param in               image
  * @param threshold
- * @param list_p           the start addres for odered link coorlist
+ * @param list_p          pose(x,y) the start addres for odered link coorlist
  * @param mem_p
  * @param modgrad          gradients of image
  * @param n_bins               1024
@@ -710,13 +710,13 @@ static image_double ll_angle( image_double in, double threshold,
                 sizeof(struct coorlist *) );
     if ( list == NULL || range_l_start == NULL || range_l_end == NULL )
         error("not enough memory.");
-    for (i = 0; i < n_bins; i++) range_l_start[i] = range_l_end[i] = NULL;
+    for (i = 0; i < n_bins; i++) range_l_start[i] = range_l_end[i] = NULL;  //creator bin and makar it blank
 
     /* 'undefined' on the down and right boundaries */
     for (x = 0; x < size_x; x++) g->data[(size_y - 1)*size_x + x] = NOTDEF; //top
     for (y = 0; y < size_y; y++) g->data[size_x * y + size_x - 1]   = NOTDEF;//right
 
-    /* compute gradient on the remaining pixels */
+    /* compute gradient on the remaining pixels , gradient angle order sort with bin (n_bins / max_grad)*/
     for (x = 0; x < size_x - 1; x++)
         for (y = 0; y < size_y - 1; y++)
         {
@@ -1883,7 +1883,7 @@ static int refine( struct point *reg, int *reg_size, image_double modgrad,
     for (i = 0; i < *reg_size; i++)
     {
         used->data[ reg[i].x + reg[i].y * used->xsize ] = NOTUSED;
-        if ( dist( xc, yc, (double) reg[i].x, (double) reg[i].y ) < rec->width )
+        if ( dist( xc, yc, (double) reg[i].x, (double) reg[i].y ) < rec->width ) //???  rec->width
         {
             angle = angles->data[ reg[i].x + reg[i].y * angles->xsize ];
             ang_d = angle_diff_signed(angle, ang_c);
@@ -1939,7 +1939,7 @@ ntuple_list LineSegmentDetection( image_double image, double scale,
     void *mem_p;
     struct rect rec;
     struct point *reg;
-    int reg_size, min_reg_size, i;
+    int reg_size, min_reg_size, i;  // reg_size the number of pixel
     unsigned int xsize, ysize;
     double rho, reg_angle, prec, p, log_nfa, logNT;
     int ls_count = 0;                   /* line segments are numbered 1,2,3,... */
@@ -2092,7 +2092,7 @@ ntuple_list lsd_scale(image_double image, double scale)
 ntuple_list lsd(image_double image)
 {
     /* LSD parameters */
-    double scale = 0.5;       /* Scale the image by Gaussian filter to 'scale'. */
+    double scale = 1;       /* Scale the image by Gaussian filter to 'scale'. */
 
     return lsd_scale(image, scale);
 }
