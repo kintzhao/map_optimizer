@@ -39,6 +39,7 @@ typedef struct linePoinits
 
 bool linkPoint(linePoinits& lines, Mat display);
 bool linkPoint2(linePoinits& lines, Mat img);
+bool linkPoint3(linePoinits& lines, Mat img);
 int lengthTwoPoint(Point p0, Point p1);
 int findMiniLength(const int length0, const int length1, const int length2, const int length3, int& state);
 int findMiniLength(const int length0, const int length1, const int length2, const int length3, int& state);
@@ -49,7 +50,7 @@ bool showLinkImg(const linePoinits lines, Mat display);
 float distanceLineWithPoint(const oneLine line, const Point p);
 void lineEquation(const oneLine line, float& A, float& B, float& C);
 int distanceTwoLine(oneLine line1, oneLine line2);
-
+string int2str(int num);
 /*
 bool linkPoint(linePoinits& lines, Mat display)
 {
@@ -152,21 +153,25 @@ bool linkPoint(linePoinits& lines, Mat display)
  */
 bool linkPoint2(linePoinits& lines, Mat img)
 {
-    static int replace, link;
+    static int replace, link , joint;
+    replace = 0;
+    link = 0;
+    joint = 0;
     Mat display_test, display, result;
     img.copyTo(display_test);
     img.copyTo(display);
     img.copyTo(result);
     cout<<"count"<<lines.count<<endl;
-    for(int i=0; i<lines.count-1 ; i++)
+    for(int i=0; i<lines.count ; i++)
     {
        // if(lines.lines.at(i).seen == true) continue;
         int min_distance = 10000;
         int min_count = -1;
         oneLine curr_line = lines.lines.at(i);
         int state = 2;
-        for(int j=i+1; j<lines.count; j++)
+        for(int j=0; j<lines.count; j++)
         {
+            if(i==j) continue;
             oneLine temp_line = lines.lines.at(j);
             int length0 = lengthTwoPoint(curr_line.start, temp_line.start);
             int length1 = lengthTwoPoint(curr_line.start, temp_line.end);
@@ -242,26 +247,29 @@ bool linkPoint2(linePoinits& lines, Mat img)
 
             if (abs(angle ) < 20.0 | abs(angle - 180) < 20.0 )//horiental
             {
+                int line_distance = distanceTwoLine(curr_line, min_line);
                 int lengthEndPoint = lengthTwoPoint(curr_line.end, min_line.end);
                 //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
                 if(lengthEndPoint >= (curr_length + min_length)*0.7 && min_distance < 8) // middle point ==> link
+//                if(lengthEndPoint >=  curr_length && lengthEndPoint >= min_length ) // middle point ==> link
                 {
                     link++;
-                    /*   // change two line to one line
-                    cout<<"horiental line :  link "<<lengthEndPoint<<endl;
-                    cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
-                    cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                       // change two line to one line
+//                    cout<<"horiental line :  link "<<lengthEndPoint<<endl;
+//                    cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                    cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
 
-                    lines.lines.at(i).start = lines.lines.at(min_count).end;
-                    lines.lines.at(min_count).start = lines.lines.at(i).end;
-                    cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
-                    */
+//                    lines.lines.at(i).start = lines.lines.at(min_count).end;
+//                    lines.lines.at(min_count).start = lines.lines.at(i).end;
+//                    cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
                     if(curr_length < min_length)
                     {
                         cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
                         cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
 
                         lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
+
                         cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
                         cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
                     }
@@ -276,7 +284,7 @@ bool linkPoint2(linePoinits& lines, Mat img)
                     }
 
                 }
-                else if(lengthEndPoint < curr_length | lengthEndPoint < min_length) //replace another
+                else if(lengthEndPoint < curr_length | lengthEndPoint < min_length | line_distance <12) //replace another
                 {
                     replace++;
                     cout<<"horiental line : replace"<<endl;
@@ -300,44 +308,59 @@ bool linkPoint2(linePoinits& lines, Mat img)
                     }
                 }
             }
+            else if(min_distance < 10)
+            {
+                int lengthEndPoint = lengthTwoPoint(curr_line.end, min_line.end);
+                //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
+                if(lengthEndPoint >=  curr_length && lengthEndPoint >= min_length ) // middle point ==> link
+                {
+                    joint++;
+                    /*   // change two line to one line
+                    cout<<"horiental line :  link "<<lengthEndPoint<<endl;
+                    cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                    cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
 
-//            else if( min_distance > 3 && min_distance < 6)  // link no parallel
-//            {
-//                if(curr_length < min_length)
-//                {
-//                    cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
-//                    cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+                    lines.lines.at(i).start = lines.lines.at(min_count).end;
+                    lines.lines.at(min_count).start = lines.lines.at(i).end;
+                    cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                    */
+                    if(curr_length < min_length)
+                    {
+                        cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+                        cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end,CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
 
-//                    lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
-//                    cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
-//                    cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
-//                }
-//                else
-//                {
-//                    cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
-//                    cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+                        lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
+                        cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+                        cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+                    }
+                    else
+                    {
+                        cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+                        cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
 
-//                    lines.lines.at(min_count).start = lines.lines.at(i).start; // be replaced
-//                    cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
-//                    cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
-//                }
-//            }
+                        lines.lines.at(min_count).start = lines.lines.at(i).start; // be replaced
+                        cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+                        cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+                    }
+                }
+            }
         }
     }
-    cout<<" link "<<link<<" replace "<<replace<< endl;
+    cout<<" link "<<link<<" replace "<<replace<<" joint "<<joint<< endl;
     showLinkImg(lines, result);
     imshow("display_test",display_test);
     imwrite("./linkPoint.png", display_test);
     imwrite("./result.png", result);
     imwrite("./display.png", display);
     imshow("display",display);
+    imshow("result",result);
 }
 
 bool showLinkImg(const linePoinits lines, Mat display)
 {
-    for (int j = 0; j < lines.count ; j++)
+    for (int j = 0; j < lines.count-50 ; j++)
     {
-        cv::line(display, lines.lines.at(j).start, lines.lines.at(j).end, cv::Scalar(255),1,CV_AA);//lines.width.at(j)
+        cv::line(display, lines.lines.at(j).start, lines.lines.at(j).end, cv::Scalar(255),1 /*lines.lines.at(j).width*/, CV_AA);//lines.width.at(j)
 
         rectangle(display, cvPoint(lines.lines.at(j).start.x-1, lines.lines.at(j).start.y-1),
                   cvPoint(lines.lines.at(j).start.x+1, lines.lines.at(j).start.y+1),
@@ -548,7 +571,7 @@ int main(int argc, char **argv)
 //    imshow("dilate_sec",dilate_src);
 
     linePoinits lsd_lines;
-    lsd_lines.count = 0;
+    int valid_line_num = 0;
     Mat img_64fc1;
     newImg.convertTo(img_64fc1, CV_64FC1);
 
@@ -576,24 +599,38 @@ int main(int argc, char **argv)
         if(width >2 && length>5)
             // if(width >2 && length>15)
         {
+            valid_line_num++;
             cv::line(lsd_display, pt1, pt2, cv::Scalar(255), width, CV_AA);
             cv::line(lsd_display_point, pt1, pt2, cv::Scalar(255), 1, CV_AA);//width
 
             oneLine  line(pt1, pt2, width, j);
             line.seen = false;
+            line.count = valid_line_num;
             lsd_lines.lines.push_back(line);
-            lsd_lines.count++;
+            lsd_lines.count = valid_line_num;
 
-            rectangle(lsd_display_point, cvPoint(pt1.x-1,pt1.y-1),
-                      cvPoint(pt1.x+1,pt1.y+1),
+//            rectangle(lsd_display_point, cvPoint(100-1,100-1),
+//                      cvPoint(100+1,100+1),
+//                      CV_RGB(255,0,0),5,8);       // remark x and y   -->x
+//                                                                   // |y
+//            rectangle(lsd_display_point, cvPoint(150-1,200-1),
+//                      cvPoint(150+1,200+1),
+//                      CV_RGB(255,0,0),5,8);        // remark x and y
+
+            rectangle(lsd_display_point, cvPoint(line.start.x-1,line.start.y-1),
+                      cvPoint(line.start.x+1,line.start.y+1),
                       CV_RGB(0,255,0),1,8);       // 画矩形点 //green
-            rectangle(lsd_display_point, cvPoint(pt2.x-1,pt2.y-1),
-                      cvPoint(pt2.x+1,pt2.y+1),
+            rectangle(lsd_display_point, cvPoint(line.end.x-1,line.end.y-1),
+                      cvPoint(line.end.x+1,line.end.y+1),
                       CV_RGB(255,0,0),1,8);       // 画矩形点 //red
+            if(line.count > 560)  //no order
+            cv::putText(lsd_display_point,int2str(line.count),cvPoint(line.start.x-1,line.start.y-1),
+                        CV_FONT_HERSHEY_COMPLEX, 1, CV_RGB(255, 0, 0) );
         }
     }
     free_ntuple_list(ntl);
     linkPoint2(lsd_lines, src_raw);
+//    linkPoint3(lsd_lines, src_raw);
 //    cv::namedWindow("src", CV_WINDOW_AUTOSIZE);
 //    cv::imshow("src", src);
 //    cv::namedWindow("lsd_display", CV_WINDOW_AUTOSIZE);
@@ -611,4 +648,430 @@ int main(int argc, char **argv)
     cv::waitKey(0);
     cv::destroyAllWindows();
     return 0;
+}
+
+
+bool linkPoint3(linePoinits& lines, Mat img)
+{
+    static int replace, link;
+    Mat display_test, display, result;
+    img.copyTo(display_test);
+    img.copyTo(display);
+    img.copyTo(result);
+    cout<<"count"<<lines.count<<endl;
+    for(int i=0; i<lines.count ; i++)
+    {
+       // if(lines.lines.at(i).seen == true) continue;
+        int min_distance = 10000;
+        int min_count = -1;
+        oneLine curr_line = lines.lines.at(i);
+        int state = 2;
+        for(int j=i+1; j<lines.count; j++)
+        {
+            oneLine temp_line = lines.lines.at(j);
+            int length0 = lengthTwoPoint(curr_line.start, temp_line.start);
+            int length1 = lengthTwoPoint(curr_line.start, temp_line.end);
+            int length2 = lengthTwoPoint(curr_line.end, temp_line.start);
+            int length3 = lengthTwoPoint(curr_line.end, temp_line.end);
+
+            //int line4 = distanceTwoLine(curr_line, temp_line);
+            int length = findMiniLength(length0, length1, length2, length3, state);
+
+            if(length < min_distance)
+            {
+                min_distance = length;
+                min_count = j;
+                lines.lines.at(min_count).seen = true;
+            }
+        }
+
+        if(min_distance < 30 )
+        {
+            cout<<" min_distance "<<min_distance<<endl;
+            oneLine min_line = lines.lines.at(min_count);
+
+            Point  orient1 = findOrient(curr_line.start, curr_line.end);
+            Point  orient2 = findOrient(min_line.start,  min_line.end);
+
+            float curr_length = sqrt(orient1.x*orient1.x + orient1.y*orient1.y);
+            float min_length = sqrt(orient2.x*orient2.x + orient2.y*orient2.y);
+
+            float cost_value = (float)(orient1.x*orient2.x + orient1.y*orient2.y)/(curr_length*min_length);
+            if(cost_value < -1 && cost_value > -2) cost_value = -1;
+            else if(cost_value > 1 && cost_value <2)  cost_value = 1;
+
+            float angle = acos(cost_value)*180.0/M_PI;//PI; //
+            //float angle = findAngle(curr_line, min_line);
+            cout<<"angle"<<angle<<endl;
+
+            cout<<"horiental process"<<endl;
+            switch(state)
+            {
+            case 0:
+            {
+                if (abs(angle ) < 20.0 | abs(angle - 180) < 20.0 )//horiental
+                {
+                    int lengthEndPoint = lengthTwoPoint(curr_line.end, min_line.end);
+                    //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
+                    if(lengthEndPoint >=  curr_length &&  lengthEndPoint>=min_length  ) // middle point ==> link
+                    {
+                        link++;
+                        if(curr_length < min_length)
+                        {
+                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
+                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+                        else
+                        {
+                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(min_count).start = lines.lines.at(i).start; // be replaced
+                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+
+                    }
+                    else if(lengthEndPoint < curr_length | lengthEndPoint < min_length) //replace another
+                    {
+                        replace++;
+                        cout<<"horiental line : replace"<<endl;
+                        if(curr_length < min_length)
+                        {
+                           cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                            lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
+                            lines.lines.at(i).end = lines.lines.at(min_count).end;
+
+                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
+                        }
+                        else
+                        {
+                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end,CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                            lines.lines.at(min_count).start = lines.lines.at(i).start; // be replaced
+                            lines.lines.at(min_count).end = lines.lines.at(i).end;
+
+                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
+                        }
+                    }
+                }
+                else if(min_distance < 12)
+                {
+                    int lengthEndPoint = lengthTwoPoint(curr_line.end, min_line.end);
+                    if(lengthEndPoint >=  curr_length &&  lengthEndPoint>=min_length  ) // middle point ==> link
+                    {
+                        link++;
+                        if(curr_length < min_length)
+                        {
+                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
+
+                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+                        else
+                        {
+                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(min_count).start = lines.lines.at(i).start; // be replaced
+                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+
+                    }
+                }
+                break;
+            }
+            case 1:
+            {
+                if (abs(angle ) < 20.0 | abs(angle - 180) < 20.0 )//horiental
+                {
+                    int lengthEndPoint = lengthTwoPoint(curr_line.end, min_line.start);
+                    //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
+                    if(lengthEndPoint >=  curr_length &&  lengthEndPoint>=min_length  ) // middle point ==> link
+                    {
+                        link++;
+                        if(curr_length < min_length)
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(i).start = lines.lines.at(min_count).end; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+                        else
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(min_count).end = lines.lines.at(i).start; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+
+                    }
+                    else if(lengthEndPoint < curr_length | lengthEndPoint < min_length) //replace another
+                    {
+                        replace++;
+                        cout<<"horiental line : replace"<<endl;
+                        if(curr_length < min_length)
+                        {
+                           //cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                            lines.lines.at(i).start = lines.lines.at(min_count).end; // be replaced
+                            lines.lines.at(i).end = lines.lines.at(min_count).start;
+
+                           // cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
+                        }
+                        else
+                        {
+                           // cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end,CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                            lines.lines.at(min_count).start = lines.lines.at(i).end; // be replaced
+                            lines.lines.at(min_count).end = lines.lines.at(i).start;
+
+                           // cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
+                        }
+                    }
+                }
+                else if(min_distance < 12)
+                {
+                    int lengthEndPoint = lengthTwoPoint(curr_line.end, min_line.start);
+                    //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
+                    if(lengthEndPoint >=  curr_length &&  lengthEndPoint>=min_length  ) // middle point ==> link
+                    {
+                        link++;
+                        if(curr_length < min_length)
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(i).start = lines.lines.at(min_count).end; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+                        else
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(min_count).end = lines.lines.at(i).start; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+
+                    }
+                }
+                //cout<<" state (before after ): "<<state<<" "<<lines.lines.at(min_count).start<<" "<<lines.lines.at(min_count).end ;
+              //  endToStart(lines.lines.at(min_count).start, lines.lines.at(min_count).end);
+                //cout<< " "<<lines.lines.at(min_count).start<<" "<<lines.lines.at(min_count).end<<endl;
+                break;
+            }
+            case 2:
+            {
+                if (abs(angle ) < 20.0 | abs(angle - 180) < 20.0 )//horiental
+                {
+                    int lengthEndPoint = lengthTwoPoint(curr_line.start, min_line.end);
+                    //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
+                    if(lengthEndPoint >=  curr_length &&  lengthEndPoint>=min_length  ) // middle point ==> link
+                    {
+                        link++;
+                        if(curr_length < min_length)
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(i).end = lines.lines.at(min_count).start; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+                        else
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(min_count).start = lines.lines.at(i).end; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+
+                    }
+                    else if(lengthEndPoint < curr_length | lengthEndPoint < min_length) //replace another
+                    {
+                        replace++;
+                        cout<<"horiental line : replace"<<endl;
+                        if(curr_length < min_length)
+                        {
+                           //cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                            lines.lines.at(i).start = lines.lines.at(min_count).end; // be replaced
+                            lines.lines.at(i).end = lines.lines.at(min_count).start;
+
+                           // cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
+                        }
+                        else
+                        {
+                           // cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end,CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                            lines.lines.at(min_count).start = lines.lines.at(i).end; // be replaced
+                            lines.lines.at(min_count).end = lines.lines.at(i).start;
+
+                           // cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
+                        }
+                    }
+                }
+                else if(min_distance < 12)
+                {
+                    int lengthEndPoint = lengthTwoPoint(curr_line.start, min_line.end);
+                    //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
+                    if(lengthEndPoint >=  curr_length &&  lengthEndPoint>=min_length  ) // middle point ==> link
+                    {
+                        link++;
+                        if(curr_length < min_length)
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(i).end = lines.lines.at(min_count).start; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+                        else
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(min_count).start = lines.lines.at(i).end; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+
+                    }
+                }
+                //cout<<" state (before after ): "<<state<<" "<<lines.lines.at(i).start<<" "<<lines.lines.at(i).end ;
+               // endToStart(lines.lines.at(i).start, lines.lines.at(i).end);
+                //cout<< " "<<lines.lines.at(i).start<<" "<<lines.lines.at(i).end<<endl;
+                break;
+            }
+            case 3:
+            {
+                if (abs(angle ) < 20.0 | abs(angle - 180) < 20.0 )//horiental
+                {
+                    int lengthEndPoint = lengthTwoPoint(curr_line.start, min_line.start);
+                    //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
+                    if(lengthEndPoint >=  curr_length &&  lengthEndPoint>=min_length  ) // middle point ==> link
+                    {
+                        link++;
+                        if(curr_length < min_length)
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(i).end = lines.lines.at(min_count).end; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+                        else
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(min_count).end = lines.lines.at(i).end; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+
+                    }
+                    else if(lengthEndPoint < curr_length | lengthEndPoint < min_length) //replace another
+                    {
+                        replace++;
+                        cout<<"horiental line : replace"<<endl;
+                        if(curr_length < min_length)
+                        {
+                           //cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                            lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
+                            lines.lines.at(i).end = lines.lines.at(min_count).end;
+
+                           // cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
+                        }
+                        else
+                        {
+                           // cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end,CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                            lines.lines.at(min_count).start = lines.lines.at(i).start; // be replaced
+                            lines.lines.at(min_count).end = lines.lines.at(i).end;
+
+                           // cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
+                        }
+                    }
+                }
+                else if(min_distance < 12)
+                {
+                    int lengthEndPoint = lengthTwoPoint(curr_line.start, min_line.start);
+                    //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
+                    if(lengthEndPoint >=  curr_length &&  lengthEndPoint>=min_length  ) // middle point ==> link
+                    {
+                        link++;
+                        if(curr_length < min_length)
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(i).end = lines.lines.at(min_count).end; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+                        else
+                        {
+//                            cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                            lines.lines.at(min_count).end = lines.lines.at(i).end; // be replaced
+//                            cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+//                            cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        }
+
+                    }
+
+                }
+                //cout<<" state (before after ): "<<state<<" "<<lines.lines.at(min_count).start<<" "<<lines.lines.at(min_count).end ;
+                //cout<<" "<<state<<" "<<lines.lines.at(i).start<<" "<<lines.lines.at(i).end ;
+
+                //endToStart(lines.lines.at(min_count).start, lines.lines.at(min_count).end);
+                //endToStart(lines.lines.at(i).start, lines.lines.at(i).end);
+
+                //cout<< " "<<lines.lines.at(min_count).start<<" "<<lines.lines.at(min_count).end;
+                //cout<< " "<<lines.lines.at(i).start<<" "<<lines.lines.at(i).end<<endl;
+                break;
+            default :
+                    break;
+                }
+            }
+
+         }
+    }
+    cout<<" link "<<link<<" replace "<<replace<< endl;
+    showLinkImg(lines, result);
+    imshow("display_test",display_test);
+    imwrite("./linkPoint.png", display_test);
+    imwrite("./result.png", result);
+    imwrite("./display.png", display);
+    imshow("display",display);
+}
+
+string int2str(int num)
+{
+    std::stringstream ss;
+    ss << num;
+    return ss.str();
 }
