@@ -2092,7 +2092,7 @@ ntuple_list lsd_scale(image_double image, double scale)
 ntuple_list lsd(image_double image)
 {
     /* LSD parameters */
-    double scale = 0.8;       /* Scale the image by Gaussian filter to 'scale'. */
+    double scale = 0.5;       /* Scale the image by Gaussian filter to 'scale'. */
 
     return lsd_scale(image, scale);
 }

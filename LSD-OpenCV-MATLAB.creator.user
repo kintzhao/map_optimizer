@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 3.6.1, 2016-06-08T12:02:01. -->
+<!-- Written by QtCreator 3.6.1, 2016-06-12T19:28:11. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -161,7 +161,7 @@
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Arguments">work_room.png</value>
     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">/home/yhzhao/temp/LSD-OpenCV-MATLAB/build/bin/lsd_opencv_example</value>
-    <value type="bool" key="ProjectExplorer.CustomExecutableRunConfiguration.UseTerminal">true</value>
+    <value type="bool" key="ProjectExplorer.CustomExecutableRunConfiguration.UseTerminal">false</value>
     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.WorkingDirectory">/home/yhzhao/temp/LSD-OpenCV-MATLAB/data</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Run /home/yhzhao/temp/LSD-OpenCV-MATLAB/build/bin/lsd_opencv_example</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">lsd_opencv_example</value>

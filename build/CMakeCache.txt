@@ -176,28 +176,16 @@ LSD_BINARY_DIR:STATIC=/home/yhzhao/temp/LSD-OpenCV-MATLAB/build
 //Value Computed by CMake
 LSD_SOURCE_DIR:STATIC=/home/yhzhao/temp/LSD-OpenCV-MATLAB
 
-//Value Computed by CMake
-MATLSD_BINARY_DIR:STATIC=/home/yhzhao/temp/LSD-OpenCV-MATLAB/build/matlab
-
-//Value Computed by CMake
-MATLSD_SOURCE_DIR:STATIC=/home/yhzhao/temp/LSD-OpenCV-MATLAB/matlab
-
-//Path to a program.
-MEXEXT_CMD:FILEPATH=MEXEXT_CMD-NOTFOUND
-
-//Path to a program.
-MEX_CMD:FILEPATH=MEX_CMD-NOTFOUND
-
 //Path where debug 3rdpaty OpenCV dependencies are located
 OpenCV_3RDPARTY_LIB_DIR_DBG:PATH=
 
 //Path where release 3rdpaty OpenCV dependencies are located
 OpenCV_3RDPARTY_LIB_DIR_OPT:PATH=
 
-OpenCV_CONFIG_PATH:FILEPATH=/usr/local/share/OpenCV
+OpenCV_CONFIG_PATH:FILEPATH=/usr/share/OpenCV
 
 //The directory containing a CMake configuration file for OpenCV.
-OpenCV_DIR:PATH=/usr/local/share/OpenCV
+OpenCV_DIR:PATH=/usr/share/OpenCV
 
 //Path where debug OpenCV libraries are located
 OpenCV_LIB_DIR_DBG:PATH=

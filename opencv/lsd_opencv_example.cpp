@@ -9,6 +9,7 @@
 //#include <cv.h>
 #include <lsd.h>
 #include <iostream>
+#include <cmath>
 using namespace cv;
 using namespace std;
 #define PI 3.14159265
@@ -36,7 +37,6 @@ typedef struct linePoinits
     vector<oneLine> lines;
 }linePoints;
 
-
 bool linkPoint(linePoinits& lines, Mat display);
 bool linkPoint2(linePoinits& lines, Mat img);
 int lengthTwoPoint(Point p0, Point p1);
@@ -46,6 +46,9 @@ float findAngle(const oneLine curr_line, const oneLine min_line);
 void endToStart(Point& start, Point& end);
 Point findOrient(const Point start, const Point end);
 bool showLinkImg(const linePoinits lines, Mat display);
+float distanceLineWithPoint(const oneLine line, const Point p);
+void lineEquation(const oneLine line, float& A, float& B, float& C);
+int distanceTwoLine(oneLine line1, oneLine line2);
 
 /*
 bool linkPoint(linePoinits& lines, Mat display)
@@ -150,10 +153,12 @@ bool linkPoint(linePoinits& lines, Mat display)
 bool linkPoint2(linePoinits& lines, Mat img)
 {
     static int replace, link;
-    Mat display;
+    Mat display_test, display, result;
+    img.copyTo(display_test);
     img.copyTo(display);
+    img.copyTo(result);
     cout<<"count"<<lines.count<<endl;
-    for(int i=0; i<lines.count ; i++)
+    for(int i=0; i<lines.count-1 ; i++)
     {
        // if(lines.lines.at(i).seen == true) continue;
         int min_distance = 10000;
@@ -163,12 +168,14 @@ bool linkPoint2(linePoinits& lines, Mat img)
         for(int j=i+1; j<lines.count; j++)
         {
             oneLine temp_line = lines.lines.at(j);
-            int length0 = lengthTwoPoint(curr_line.start,temp_line.start);
+            int length0 = lengthTwoPoint(curr_line.start, temp_line.start);
             int length1 = lengthTwoPoint(curr_line.start, temp_line.end);
             int length2 = lengthTwoPoint(curr_line.end, temp_line.start);
             int length3 = lengthTwoPoint(curr_line.end, temp_line.end);
 
+            //int line4 = distanceTwoLine(curr_line, temp_line);
             int length = findMiniLength(length0, length1, length2, length3, state);
+
             if(length < min_distance)
             {
                 min_distance = length;
@@ -177,7 +184,7 @@ bool linkPoint2(linePoinits& lines, Mat img)
             }
         }
 
-        if(min_distance < 25 )
+        if(min_distance < 20 )
         {
             cout<<" min_distance "<<min_distance<<endl;
             oneLine min_line = lines.lines.at(min_count);
@@ -188,54 +195,85 @@ bool linkPoint2(linePoinits& lines, Mat img)
             float curr_length = sqrt(orient1.x*orient1.x + orient1.y*orient1.y);
             float min_length = sqrt(orient2.x*orient2.x + orient2.y*orient2.y);
 
-            float angle = acos((float)(orient1.x*orient2.x + orient1.y*orient2.y)/(curr_length*min_length))*180.0/PI; //
+            float cost_value = (float)(orient1.x*orient2.x + orient1.y*orient2.y)/(curr_length*min_length);
+            if(cost_value < -1 && cost_value > -2) cost_value = -1;
+            else if(cost_value > 1 && cost_value <2)  cost_value = 1;
 
-
+            float angle = acos(cost_value)*180.0/M_PI;//PI; //
             //float angle = findAngle(curr_line, min_line);
             cout<<"angle"<<angle<<endl;
 
-            if (abs(angle ) < 30.0 | abs(angle - 180) < 30.0 )//horiental
+            cout<<"horiental process"<<endl;
+            switch(state)
             {
-                cout<<"horiental process"<<endl;
-                switch(state)
-                {
-                case 0:
-                {
+            case 0:
+            {
+                break;
+            }
+            case 1:
+            {
+                //cout<<" state (before after ): "<<state<<" "<<lines.lines.at(min_count).start<<" "<<lines.lines.at(min_count).end ;
+                endToStart(lines.lines.at(min_count).start, lines.lines.at(min_count).end);
+                //cout<< " "<<lines.lines.at(min_count).start<<" "<<lines.lines.at(min_count).end<<endl;
+                break;
+            }
+            case 2:
+            {
+                //cout<<" state (before after ): "<<state<<" "<<lines.lines.at(i).start<<" "<<lines.lines.at(i).end ;
+                endToStart(lines.lines.at(i).start, lines.lines.at(i).end);
+                //cout<< " "<<lines.lines.at(i).start<<" "<<lines.lines.at(i).end<<endl;
+                break;
+            }
+            case 3:
+            {
+                //cout<<" state (before after ): "<<state<<" "<<lines.lines.at(min_count).start<<" "<<lines.lines.at(min_count).end ;
+                //cout<<" "<<state<<" "<<lines.lines.at(i).start<<" "<<lines.lines.at(i).end ;
+
+                endToStart(lines.lines.at(min_count).start, lines.lines.at(min_count).end);
+                endToStart(lines.lines.at(i).start, lines.lines.at(i).end);
+
+                //cout<< " "<<lines.lines.at(min_count).start<<" "<<lines.lines.at(min_count).end;
+                //cout<< " "<<lines.lines.at(i).start<<" "<<lines.lines.at(i).end<<endl;
+                break;
+            default :
                     break;
                 }
-                case 1:
-                {
-                    endToStart(lines.lines.at(min_count).start, lines.lines.at(min_count).end);
-                    break;
-                }
-                case 2:
-                {
-                    endToStart(lines.lines.at(i).start, lines.lines.at(i).end);
-                    //lengthEndPoint = lengthTwoPoint(curr_line.start, min_line.end);
-                    break;
-                }
-                case 3:
-                {
-                    endToStart(lines.lines.at(min_count).start, lines.lines.at(min_count).end);
-                    endToStart(lines.lines.at(i).start, lines.lines.at(i).end);
-                    //lengthEndPoint = lengthTwoPoint(curr_line.start, min_line.start);
-                    break;
-                default :
-                        break;
-                    }
-                }
+            }
+
+            if (abs(angle ) < 20.0 | abs(angle - 180) < 20.0 )//horiental
+            {
                 int lengthEndPoint = lengthTwoPoint(curr_line.end, min_line.end);
                 //int length_another = sqrt((lines.start.at(i).x - lines.end.at(min_count).x)*(lines.start.at(i).x - lines.end.at(min_count).x) + (lines.start.at(i).y - lines.end.at(min_count).y)*(lines.start.at(i).y - lines.end.at(min_count).y));
-                if(lengthEndPoint >= (curr_length + min_length - 6)) // middle point ==> link
+                if(lengthEndPoint >= (curr_length + min_length)*0.7 && min_distance < 8) // middle point ==> link
                 {
                     link++;
+                    /*   // change two line to one line
                     cout<<"horiental line :  link "<<lengthEndPoint<<endl;
-                    cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),5,CV_AA);//lines.width.at(j)
-                    cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),5,CV_AA);//lines.width.at(j)
+                    cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                    cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
 
                     lines.lines.at(i).start = lines.lines.at(min_count).end;
                     lines.lines.at(min_count).start = lines.lines.at(i).end;
-                  //  cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                    cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                    */
+                    if(curr_length < min_length)
+                    {
+                        cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                        lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
+                        cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                    }
+                    else
+                    {
+                        cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+
+                        lines.lines.at(min_count).start = lines.lines.at(i).start; // be replaced
+                        cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                        cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,255,0),1,CV_AA);//lines.width.at(j)
+                    }
 
                 }
                 else if(lengthEndPoint < curr_length | lengthEndPoint < min_length) //replace another
@@ -244,24 +282,55 @@ bool linkPoint2(linePoinits& lines, Mat img)
                     cout<<"horiental line : replace"<<endl;
                     if(curr_length < min_length)
                     {
-                       cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
-                        lines.lines.at(i).start = lines.lines.at(min_count).start;
+                       cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                        lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
                         lines.lines.at(i).end = lines.lines.at(min_count).end;
+
+                        cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
 
                     }
                     else
                     {
-                        cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end,CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
-                        lines.lines.at(min_count).start = lines.lines.at(i).start;
+                        cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end,CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+                        lines.lines.at(min_count).start = lines.lines.at(i).start; // be replaced
                         lines.lines.at(min_count).end = lines.lines.at(i).end;
+
+                        cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(255,0,0),1,CV_AA);//lines.width.at(j)
+
                     }
                 }
             }
+
+//            else if( min_distance > 3 && min_distance < 6)  // link no parallel
+//            {
+//                if(curr_length < min_length)
+//                {
+//                    cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+//                    cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+
+//                    lines.lines.at(i).start = lines.lines.at(min_count).start; // be replaced
+//                    cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+//                    cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+//                }
+//                else
+//                {
+//                    cv::line(display_test, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+//                    cv::line(display_test, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+
+//                    lines.lines.at(min_count).start = lines.lines.at(i).start; // be replaced
+//                    cv::line(display, lines.lines.at(min_count).start, lines.lines.at(min_count).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+//                    cv::line(display, lines.lines.at(i).start, lines.lines.at(i).end, CV_RGB(0,0,255),1,CV_AA);//lines.width.at(j)
+//                }
+//            }
         }
     }
     cout<<" link "<<link<<" replace "<<replace<< endl;
-    showLinkImg(lines,display);
-
+    showLinkImg(lines, result);
+    imshow("display_test",display_test);
+    imwrite("./linkPoint.png", display_test);
+    imwrite("./result.png", result);
+    imwrite("./display.png", display);
+    imshow("display",display);
 }
 
 bool showLinkImg(const linePoinits lines, Mat display)
@@ -284,8 +353,86 @@ int lengthTwoPoint(Point p0, Point p1)
     return sqrt((p0.x-p1.x)*(p0.x-p1.x) + (p0.y-p1.y)*(p0.y-p1.y));
 }
 
+int distanceTwoLine(oneLine line1, oneLine line2)
+{
+    int min_distance;
+    int len1 = lengthTwoPoint(line1.start, line1.start);
+    int len2 = lengthTwoPoint(line2.start, line2.end);
+
+    if(len1 <= len2)
+    {
+        int distance1 = distanceLineWithPoint(line2, line1.start);
+        int distance2 = distanceLineWithPoint(line2, line1.end);
+        if(distance1 <= distance2)
+        {
+            return distance1;
+        }
+        else
+            return distance2;
+    }
+    else
+    {
+        int distance1 = distanceLineWithPoint(line1, line2.start);
+        int distance2 = distanceLineWithPoint(line1, line2.end);
+        if(distance1 <= distance2)
+        {
+            return distance1;
+        }
+        else
+            return distance2;
+    }
+}
+
+void lineEquation(const oneLine line, float& A, float& B, float& C)
+{
+   A = line.end.y - line.start.y;
+   B = line.start.x - line.end.x;
+   C = (line.start.y - line.end.y)*line.start.x + (line.end.x - line.start.x)*line.start.y;
+}
+float distanceLineWithPoint(const oneLine line, const Point p)
+{
+   float a,b,c;
+   lineEquation(line, a, b, c);
+   return (a*p.x + b*p.y + c)/sqrt(a*a + b*b);
+}
+
 int findMiniLength(const int length0, const int length1, const int length2, const int length3, int& state)
 {
+//    int min_1, min_2, min, temp;
+//    if(length0 >= length2)
+//    {
+//        min_1 = length2;
+//        temp = 2;
+//    }
+//    else
+//    {
+//        min_1 = length0;
+//        temp = 0;
+//    }
+
+//    if(length1 > length3)
+//    {
+//        min_2 = length3;
+//        temp = 2;
+//    }
+//    else
+//    {
+//        min_2 = length0;
+//        temp = 0;
+//    }
+
+//    if(min_1 >= min_2)
+//    {
+//        min = min_2;
+//        state = temp;
+//    }
+//    else
+//    {
+//        min = min_1;
+//        state = temp + 1;
+//    }
+//    return min;
+
     int min =10000;
     if (length0 < min)
     {
@@ -297,7 +444,7 @@ int findMiniLength(const int length0, const int length1, const int length2, cons
         min = length1;
         state = 1;
     }
-    if (length2 < min)
+    if (length2 <= min)
     {
         min = length2;
         state = 2;
@@ -374,17 +521,17 @@ int main(int argc, char **argv)
     //    Mat guass_gray;
     //    GaussianBlur(src, guass_gray, Size( 3, 3 ), 0, 0 );
 
-    Mat erode_src, dilate_src;
-    cv::erode(newImg, erode_src, Mat(2,2,CV_8U), Point(-1,-1),4);
-    cv::erode(erode_src, erode_src, Mat(2,2,CV_8U), Point(-1,-1),2);
-    cv::erode(erode_src, erode_src, Mat(2,2,CV_8U), Point(-1,-1),2);
-    cv::erode(erode_src, erode_src, Mat(2,2,CV_8U), Point(-1,-1),2);
-    //cv::erode(erode_src, erode_src, Mat(2,2,CV_8U), Point(-1,-1),3);
+//    Mat erode_src, dilate_src;
+//    cv::erode(newImg, erode_src, Mat(2,2,CV_8U), Point(-1,-1),4);
+//    cv::erode(erode_src, erode_src, Mat(2,2,CV_8U), Point(-1,-1),2);
+//    cv::erode(erode_src, erode_src, Mat(2,2,CV_8U), Point(-1,-1),2);
+//    cv::erode(erode_src, erode_src, Mat(2,2,CV_8U), Point(-1,-1),2);
+//    //cv::erode(erode_src, erode_src, Mat(2,2,CV_8U), Point(-1,-1),3);
 
-    cv::dilate(erode_src,dilate_src , Mat(2,2,CV_8U), Point(-1,-1), 4);//膨胀
-    cv::dilate(dilate_src,dilate_src , Mat(2,2,CV_8U), Point(-1,-1), 2);//膨胀
-    cv::dilate(dilate_src,dilate_src , Mat(2,2,CV_8U), Point(-1,-1), 2);//膨胀
-    cv::dilate(dilate_src,dilate_src , Mat(2,2,CV_8U), Point(-1,-1), 2);//膨胀
+//    cv::dilate(erode_src,dilate_src , Mat(2,2,CV_8U), Point(-1,-1), 4);//膨胀
+//    cv::dilate(dilate_src,dilate_src , Mat(2,2,CV_8U), Point(-1,-1), 2);//膨胀
+//    cv::dilate(dilate_src,dilate_src , Mat(2,2,CV_8U), Point(-1,-1), 2);//膨胀
+//    cv::dilate(dilate_src,dilate_src , Mat(2,2,CV_8U), Point(-1,-1), 2);//膨胀
 
     //    int r = dilate_src.rows; // number of rows
     //    int c = dilate_src.cols; // total number of elements per line
@@ -401,7 +548,7 @@ int main(int argc, char **argv)
 //    imshow("dilate_sec",dilate_src);
 
     linePoinits lsd_lines;
-
+    lsd_lines.count = 0;
     Mat img_64fc1;
     newImg.convertTo(img_64fc1, CV_64FC1);
 
@@ -410,7 +557,7 @@ int main(int argc, char **argv)
 
     image_double image = new_image_double(cols, rows);
     image->data = img_64fc1.ptr<double>(0);
-    ntuple_list ntl = lsd(image);
+    ntuple_list ntl = lsd(image);//**** lsd
 
     cv::Mat lsd_display = cv::Mat::zeros(rows, cols, CV_8UC1);
     cv::Mat lsd_display_point;
@@ -447,12 +594,12 @@ int main(int argc, char **argv)
     }
     free_ntuple_list(ntl);
     linkPoint2(lsd_lines, src_raw);
-
 //    cv::namedWindow("src", CV_WINDOW_AUTOSIZE);
 //    cv::imshow("src", src);
 //    cv::namedWindow("lsd_display", CV_WINDOW_AUTOSIZE);
 //    cv::imshow("lsd_display", lsd_display);
     cv::imshow("lsd_display_point", lsd_display_point);
+    imwrite("./lsd_display_point.png", lsd_display_point);
     //    Mat img_erode;
     //    cv::dilate(lsd_display, img_erode, Mat(2,2,CV_8U), Point(-1,-1), 1);//膨胀
     // cv::erode(lsd_display, img_erode, Mat(2,2,CV_8U), Point(-1,-1),1);
