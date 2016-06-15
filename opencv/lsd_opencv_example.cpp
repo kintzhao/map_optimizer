@@ -42,6 +42,24 @@ typedef struct linePoinits
     vector<oneLine> lines;
 }linePoints;
 
+typedef struct rectOrder
+{
+    int order;
+    rectOrder *next;
+}rectOrder;
+
+typedef struct squareness
+{
+    double min_x;
+    double max_x;
+    double min_y;
+    double max_y;
+   // double angle;
+    int direct;//0 x ; 1 y
+}squareness;
+
+
+
 bool linkPoint(linePoinits& lines, Mat display);
 bool linkPoint2(linePoinits& lines, Mat img);
 bool linkPoint3(linePoinits& lines, Mat img);
@@ -60,8 +78,198 @@ bool imgProcess(vector<rect>& lines, Mat img);
 bool imgProcess2(vector<rect>& lines, Mat img);
 int distanceTwoRect(rect rec1, rect rec2);
 bool displayRect(const vector<rect> lines, Mat& display);
+vector<rect> sortRect(vector<rect>& lines);
+static void error(char *msg);
+double normDiffAngle(double angle1, double angle2);
+static Scalar random_color();
+Point2d rotatePoint(Point2d p, double angle, Point2d fixed);
+Point2d rotatePointRever(Point2d p, double angle, Point2d fixed);
+squareness getRectangle(Point2d start, Point2d end);
+int isInRectangle(squareness rec, Point2d p1, Point2d p2, float rect_width);
+bool extendLink(int state, squareness rec, Point2d &p1, Point2d &p2);
+bool extendRect(squareness &rec, Point2d p);
+bool getLineFromRect(squareness rec, Point2d &start, Point2d &end);
 
 
+bool extendLink(int state, squareness rec, Point2d& p1, Point2d& p2)
+{
+   int dirct = (rec.max_x - rec.min_x) >= (rec.max_y - rec.min_y) ? 0:1 ; // 0 == x   ; 1==> y
+
+   if (state == 1) // p1 in rect
+   {
+       if(dirct) //y
+       {
+          if(p2.y > rec.max_y)
+              rec.max_y = p2.y;
+          else if( p2.y < rec.min_y)
+              rec.min_y = p2.y;
+
+         p1.x = (rec.min_x + rec.max_x)/2;
+         p2.x = (rec.min_x + rec.max_x)/2;
+         p1.y = rec.min_y;
+         p2.y = rec.max_y;
+       }
+       else //x
+       {
+           if(p2.x > rec.max_x)
+               rec.max_x = p2.x;
+           else if( p2.x < rec.min_x)
+               rec.min_x = p2.x;
+
+           p1.x = (rec.min_y + rec.max_y)/2;
+           p2.x = (rec.min_y + rec.max_y)/2;
+           p1.y = rec.min_x;
+           p2.y = rec.max_x;
+       }
+   }
+   else if (state == 2) // p2 in rect
+   {
+       if(dirct) //y
+       {
+          if(p1.y > rec.max_y)
+              rec.max_y = p1.y;
+          else if( p1.y < rec.min_y)
+              rec.min_y = p1.y;
+
+          p1.x = (rec.min_x + rec.max_x)/2;
+          p2.x = (rec.min_x + rec.max_x)/2;
+          p1.y = rec.min_y;
+          p2.y = rec.max_y;
+       }
+       else //x
+       {
+           if(p1.x > rec.max_x)
+               rec.max_x = p1.x;
+           else if( p1.x < rec.min_x)
+               rec.min_x = p1.x;
+
+           p1.x = (rec.min_y + rec.max_y)/2;
+           p2.x = (rec.min_y + rec.max_y)/2;
+           p1.y = rec.min_x;
+           p2.y = rec.max_x;
+       }
+   }
+}
+
+bool extendRect(squareness& rec, Point2d p)
+{
+    if(rec.direct) //y
+    {
+        if(p.y > rec.max_y)
+            rec.max_y = p.y;
+        else if( p.y < rec.min_y)
+            rec.min_y = p.y;
+   }
+    else //x
+    {
+        if(p.x > rec.max_x)
+            rec.max_x = p.x;
+        else if( p.x < rec.min_x)
+            rec.min_x = p.x;
+    }
+
+}
+bool getLineFromRect(squareness rec, Point2d& start, Point2d& end)
+{
+    if(rec.direct)
+    {
+        start.x = (rec.min_x + rec.max_x)/2;
+        end.x = (rec.min_x + rec.max_x)/2;
+        start.y = rec.min_y;
+        end.y = rec.max_y;
+    }
+    else
+    {
+        start.x = rec.min_x;
+        end.x = rec.max_x;
+        start.y = (rec.min_y + rec.max_y)/2;
+        end.y = (rec.min_y + rec.max_y)/2;
+    }
+}
+/**
+ * @brief isInRectangle
+   state: 0 (no point in rect)
+   state: 1 (p1 in )
+   state: 2 (p2 in )
+   state: 3 (p1 and p2 in)
+ * @return
+ */
+int isInRectangle(squareness rec, Point2d p1, Point2d p2, float rect_width)
+{
+    int state = 0;
+    if( (p1.x >= rec.min_x - rect_width && p1.x <= rec.max_x + rect_width) &&
+        (p1.y >= rec.min_y - rect_width && p1.y <= rec.max_y + rect_width) )
+        state += 1;
+    if( (p2.x >= rec.min_x - rect_width && p2.x <= rec.max_x + rect_width) &&
+        (p2.y >= rec.min_y - rect_width && p2.y <= rec.max_y + rect_width) )
+        state += 2;
+    return state;
+}
+Point2d rotatePoint(Point2d p, double angle, Point2d fixed)
+{
+    Point2d p_new;
+    p_new.x = cos(angle)*(p.x - fixed.x) + sin(angle)*(p.y - fixed.y)  ;
+    p_new.y = -sin(angle)*(p.x - fixed.x) + cos(angle)*(p.y - fixed.y) ;
+
+//    p_new.x = cos(angle)*p.x + sin(angle)*p.y ;
+//    p_new.y = -sin(angle)*p.x + cos(angle)*p.y;
+    return p_new;
+}
+
+Point2d rotatePointRever(Point2d p, double angle, Point2d fixed)
+{
+    Point2d p_new;
+    p_new.x = cos(-angle)*p.x + sin(-angle)*p.y  + fixed.x;
+    p_new.y = -sin(-angle)*p.x + cos(-angle)*p.y + fixed.y;
+    return p_new;
+}
+
+squareness getRectangle(Point2d start, Point2d end)
+{
+   squareness rec;
+   if(start.x >= end.x)
+   {
+       rec.max_x = start.x;
+       rec.min_x = end.x;
+   }
+   else
+   {
+       rec.max_x = end.x;
+       rec.min_x = start.x;
+   }
+
+   if(start.y >= end.y)
+   {
+       rec.max_y = start.y;
+       rec.min_y = end.y;
+   }
+   else
+   {
+       rec.max_y = end.y;
+       rec.min_y = start.y;
+   }
+   return rec;
+}
+
+static Scalar random_color()
+{
+    RNG rng(0xFFFFFFFF);
+    int icolor = (unsigned) rng;
+    return Scalar( icolor&255, (icolor>>8)&255, (icolor>>16)&255 );
+}
+
+// the angle between the two lines
+double normDiffAngle(double angle1, double angle2)
+{
+    double diff = angle1 - angle2;
+    while(diff > M_PI)
+        diff -= M_PI;
+    while(diff <= 0.0)
+        diff += M_PI;
+    if(diff > M_PI/2)
+       diff = M_PI - diff;
+    return diff;
+}
 
 /**
  * @brief linkPoint2
@@ -430,94 +638,228 @@ bool imgProcess(vector<rect>& lines, Mat img)
     imshow("display",display);
     imshow("display_test",display_test);
 }
+static void error(char *msg)
+{
+    fprintf(stderr, "LSD Error: %s\n", msg);
+    exit(EXIT_FAILURE);
+}
+
+vector<rect> sortRect(vector<rect>& lines)
+{
+    if(lines.empty())
+        error("lsd can not find line");
+    double max_length = -1;
+    for(vector<rect>::iterator it=lines.begin(); it!=lines.end(); ++it)
+    {
+        rect rec_temp = *it;
+      if (rec_temp.length > max_length)
+          max_length = rec_temp.length;
+    }
+    int n_bins = 100;
+    int list_count = 0;
+    rectOrder* list;
+    rectOrder** range_l_s;
+    rectOrder** range_l_e;
+    rectOrder* start;
+    rectOrder* end;
+
+    int rec_number = lines.size();
+    list = (rectOrder *) calloc( (size_t) (rec_number), sizeof(rectOrder) );
+    range_l_s = (rectOrder **) calloc( (size_t) n_bins, sizeof(rectOrder *) );
+    range_l_e = (rectOrder **) calloc( (size_t) n_bins, sizeof(rectOrder *) );
+    if ( list == NULL || range_l_s == NULL || range_l_e == NULL )
+        error("not enough memory.");
+    for (int i = 0; i < n_bins; i++) range_l_s[i] = range_l_e[i] = NULL;
+
+    for(int it = 0; it < lines.size(); ++it)
+    {
+        rect rec_temp = lines.at(it);
+        int i = (unsigned int) (rec_temp.length * (double) n_bins / max_length);
+        if ( i >= n_bins ) i = n_bins - 1;
+        if ( range_l_e[i] == NULL )
+            range_l_s[i] = range_l_e[i] = list + list_count++;
+        else
+        {
+            range_l_e[i]->next = list + list_count;
+            range_l_e[i] = list + list_count++;
+        }
+        range_l_e[i]->order = it;
+        range_l_e[i]->next = NULL;
+    }
+    int i;
+    for ( i = n_bins - 1; i > 0 && range_l_s[i] == NULL; i--);
+    start = range_l_s[i];
+    end = range_l_e[i];
+    if ( start != NULL )
+        for (i--; i > 0; i--)
+            if ( range_l_s[i] != NULL )
+            {
+                end->next = range_l_s[i];
+                end = range_l_e[i];
+            }
+
+    vector<rect> rec_lines;
+    //cout<<"length after order: "<< endl;
+    for (; start != NULL; start = start->next )
+    {
+        if(lines.at(start->order).width > 2 | lines.at(start->order).length > 10)
+        {
+            rec_lines.push_back(lines.at(start->order));
+            cout<<"  "<< lines.at(start->order).length<<"   ";
+        }
+    }
+    lines.clear();
+    free( (void *) range_l_s );
+    free( (void *) range_l_e );
+    free( list);
+    list  = NULL;
+    start = NULL;
+    end   = NULL;
+
+   return rec_lines;
+}
 
 bool imgProcess2(vector<rect>& lines, Mat img)
 {
-    Mat display, display_test;
+    Mat display, display_test, display_test_before;
     img.copyTo(display);
     img.copyTo(display_test);
-    vector<rect> near_lines;
-    cout<<" lines.size()  "<<lines.size()<<endl;
+    img.copyTo(display_test_before);
+    cout<<" sortRect brfore size()  "<<lines.size()<<endl;
+    lines = sortRect(lines);
+    cout<<" sortRect after size()   "<<lines.size()<<endl;
+    const float angle_thr = 10*M_PI/180;
+    float rect_width ;
     for (int i = 0; i != lines.size(); ++i)
     {
+        Scalar color = CV_RGB(rand()&255, rand()&255, rand()&255);// = random_color();
         rect current_line = lines.at(i);
-        cout<<" current_theta: "<<current_line.theta<<endl;
-        if(current_line.width<=2 | current_line.length <10)
+       // cout<<" current_theta: "<<current_line.theta<<endl;
+//        Point test = rotatePoint(Point(3,3), 45*M_PI/180);
+//        cout<<test.x <<" "<< test.y <<" "<<endl;
+
+       // cv::line(display_test, Point(current_line.x1, current_line.y1), Point(current_line.x2, current_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/,CV_AA);//lines.width.at(j)
+
+        Point2d start = rotatePoint(Point(current_line.x1, current_line.y1), current_line.theta, Point2d(current_line.x, current_line.y));
+        Point2d end = rotatePoint(Point(current_line.x2, current_line.y2), current_line.theta, Point2d(current_line.x, current_line.y));
+        squareness rec = getRectangle(start,end);
+        rec.direct = (rec.max_x - rec.min_x) >= (rec.max_y - rec.min_y) ? 0:1 ; // 0 == x   ; 1==> y
+
+//        rectangle(display_test, cvPoint(rec.min_x, rec.min_y),
+//                  cvPoint(rec.max_x, rec.max_y),
+//                  CV_RGB(255,0,0),1,8);       // 画矩形点
+
+
+        for(int j=i+1; j!= lines.size(); j++)
         {
-            lines.erase(lines.begin()+i);
-            cv::line(display_test, Point(current_line.x1, current_line.y1), Point(current_line.x2, current_line.y2), CV_RGB(0,0,255), 1/*current_line.width*/ , CV_AA);//lines.width.at(j)
-            i=i-1;
-            continue;
-        }
-        near_lines.clear();
-        near_lines.push_back(current_line);
-        for(int j=i+1; j!= lines.size(); ++j)
-        {
-            //if(i == j) continue ;
+            if(i == j) continue ;
             rect temp_line = lines.at(j);
-            int min_distance = distanceTwoRect(current_line, temp_line);
-            int min_center_distance = lengthTwoPoint(Point(current_line.x, current_line.y), Point(temp_line.x, temp_line.y));
-            //cout<<" min_distance  "<<min_distance<<" min_center_distance "<<min_center_distance<<endl;
-            if( min_distance < (current_line.width + temp_line.width) && min_center_distance < (current_line.width + temp_line.width)*1.5 && abs(current_line.theta - temp_line.theta) < 50.0*3.14/180 )
+            if(current_line.length < temp_line.length) continue;
+            if(normDiffAngle(current_line.theta, temp_line.theta) < angle_thr)//parallel
             {
-                // cout<<" min_distance  "<<min_distance<<endl;
-                near_lines.push_back(temp_line);
-                cv::line(display_test, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,255,0), 1/*temp_line.width*/ , CV_AA);//lines.width.at(j)
-                lines.erase(lines.begin()+j);
-                j--;
+//test
+//                Point2d p1 = rotatePoint(Point2d(3,3),  -45*M_PI/180,  Point2d(2, 2));
+//                Point2d test = rotatePointRever(Point2d(p1.x, p1.y), -45*M_PI/180, Point2d(2, 2));
+//                cout<<"p1 test : "<<temp_line.x1<<" "<<temp_line.y1<<" "<<p1.x<<" "<<p1.y<<" "<<test.x<< " "<<test.y<<endl;
+
+//               Point2d p1 = rotatePoint(Point2d(temp_line.x1, temp_line.y1), current_line.theta,  Point2d(current_line.x, current_line.y));
+//               Point2d test = rotatePointRever(Point2d(p1.x, p1.y), current_line.theta, Point2d(current_line.x, current_line.y));
+//               cout<<"p1 test : "<<temp_line.x1<<" "<<temp_line.y1<<" "<<p1.x<<" "<<p1.y<<" "<<test.x<< " "<<test.y<<endl;
+
+               Point2d p1 = rotatePoint(Point2d(temp_line.x1, temp_line.y1), current_line.theta, Point2d(current_line.x, current_line.y));
+               Point2d p2 = rotatePoint(Point2d(temp_line.x2, temp_line.y2), current_line.theta, Point2d(current_line.x, current_line.y));
+               rect_width = (current_line.width + temp_line.width)*0.8;
+
+               int state = isInRectangle(rec, p1, p2, rect_width);
+               Point2d rot_point_temp ;
+               Point2d start, end;
+               switch(state)
+               {
+               case 0:
+                   continue;
+                   break;
+
+               case 1:
+                    extendRect(rec, p2);
+                    getLineFromRect(rec, start, end);
+
+                    rot_point_temp = rotatePointRever(start, current_line.theta, Point2d(current_line.x, current_line.y));
+                    lines.at(i).x1 = rot_point_temp.x;
+                    lines.at(i).y1 = rot_point_temp.y;
+
+                    rot_point_temp = rotatePointRever(end, current_line.theta, Point2d(current_line.x, current_line.y));
+                    lines.at(i).x1 = rot_point_temp.x;
+                    lines.at(i).y1 = rot_point_temp.y;
+
+                    cv::line(display_test_before, Point(lines.at(j).x1, lines.at(j).y1), Point(lines.at(j).x2, lines.at(j).y2), CV_RGB(255,0,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                    lines.erase(lines.begin() + j);
+                    cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(255,0,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                    j--;
+                    break;
+
+               case 2:
+
+                   extendRect(rec, p1);
+                   getLineFromRect(rec, start, end);
+
+                   rot_point_temp = rotatePointRever(start, current_line.theta, Point2d(current_line.x, current_line.y));
+                   lines.at(i).x1 = rot_point_temp.x;
+                   lines.at(i).y1 = rot_point_temp.y;
+
+                   rot_point_temp = rotatePointRever(end, current_line.theta, Point2d(current_line.x, current_line.y));
+                   lines.at(i).x1 = rot_point_temp.x;
+                   lines.at(i).y1 = rot_point_temp.y;
+
+                   cv::line(display_test_before, Point(lines.at(j).x1, lines.at(j).y1), Point(lines.at(j).x2, lines.at(j).y2), CV_RGB(0,255,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                   lines.erase(lines.begin() + j);
+                   cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(0,255,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                   j--;
+                   break;
+
+               case 3:
+
+                   lines.erase(lines.begin() + j);
+                   cv::line(display_test_before, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                   cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+
+                   j--;
+                   break;
+               }
+//               if(i==3)
+//               {
+//                   imshow("display_test",display_test);
+//                   cv::waitKey(5);
+//               }
+                //test
+//                cv::line(display, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), color,1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+//                cv::line(display, Point(current_line.x1, current_line.y1), Point(current_line.x2, current_line.y2), color,1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+//               imshow("display",display);
+//               cv::waitKey(5);
+
+
             }
-        }
-        int min_x = 1000, min_y = 10000, max_x = 0, max_y = 0;
-        for(int k =0; k!= near_lines.size(); ++k)
-        {
-            if ( near_lines.at(k).x1 > max_x ) max_x = near_lines.at(k).x1;
-            if ( near_lines.at(k).x2 > max_x ) max_x = near_lines.at(k).x2;
+            else //across
+            {
 
-            if ( near_lines.at(k).x1 < min_x ) min_x = near_lines.at(k).x1;
-            if ( near_lines.at(k).x2 < min_x ) min_x = near_lines.at(k).x2;
+             ;
+            }
 
-            if ( near_lines.at(k).y1 > max_y ) max_y = near_lines.at(k).y1;
-            if ( near_lines.at(k).y2 > max_y ) max_y = near_lines.at(k).y2;
-
-            if ( near_lines.at(k).y1 < min_y ) min_y = near_lines.at(k).y1;
-            if ( near_lines.at(k).y2 < min_y ) min_y = near_lines.at(k).y2;
         }
-        cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(255,0,0), 1/*temp_line.width*/ , CV_AA);//lines.width.at(j)
-        if(current_line.theta <= M_PI/2.0)
-        {
-            int length = lengthTwoPoint(Point(min_x,min_y), Point(max_x, max_y)) ;
-            lines.at(i).x1 = min_x;//-1;
-            lines.at(i).x2 = max_x;//+1;
-            lines.at(i).y1 = min_y;//-1;
-            lines.at(i).y2 = max_y;//+1;
-            lines.at(i).length = length;
-        }
-        else{
-            int length = lengthTwoPoint(Point(min_x,max_y), Point(max_x, min_y)) ;
-            lines.at(i).x1 = min_x;//-1;
-            lines.at(i).x2 = max_x;//+1;
-            lines.at(i).y1 = max_y;//+1;
-            lines.at(i).y2 = min_y;//-1;
-            lines.at(i).length = length;
-        }
-    }
+      //  if(i%10 == 2){
+        imshow("display_test",display_test);
+        cv::waitKey(5);
+      //  }
+     }
 
     cout<<" lines.size()  "<<lines.size()<<endl;
     for (int j = 0; j < lines.size(); j++)
     {
         rect temp_line = lines.at(j);
         cv::line(display, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
-//            cv::putText(display,int2str(j),cvPoint(temp_line.x-1,temp_line.y-1),
-//                        CV_FONT_HERSHEY_COMPLEX, 1, CV_RGB(255, 0, 0) );
-        //        rectangle(display, cvPoint(temp_line.x1-1, temp_line.y1-1),
-        //                  cvPoint(temp_line.x1+1, temp_line.y1+1),
-        //                  CV_RGB(0,255,0),1,8);       // 画矩形点
-        //        rectangle(display, cvPoint(temp_line.x2-1,temp_line.y2-1),
-        //                  cvPoint(temp_line.x2+1,temp_line.y2+1),
-        //                  CV_RGB(255,0,0),1,8);       // 画矩形点
     }
     imshow("display",display);
     imshow("display_test",display_test);
+    imshow("display_test_before",display_test_before);
 }
 
 
@@ -750,7 +1092,8 @@ int main(int argc, char **argv)
     displayRect(LSD, lsd_display_point);
     imshow("lsd",lsd_display_point);
 
-    imgProcess(LSD, src_raw);
+
+    imgProcess2(LSD, src_raw);
 
 
     //    cv::Point pt1, pt2;
