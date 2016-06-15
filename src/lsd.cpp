@@ -108,6 +108,7 @@
 /** Label for pixels already used in detection. */
 #define USED    1
 
+
 /*----------------------------------------------------------------------------*/
 /** Chained list of coordinates.
  */
@@ -1050,25 +1051,6 @@ static double nfa(int n, int k, double p, double logNT)
     return -log10(bin_tail) - logNT;
 }
 
-
-/*----------------------------------------------------------------------------*/
-/*--------------------------- Rectangle structure ----------------------------*/
-/*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*/
-/** Rectangle structure: line segment with width.
- */
-struct rect
-{
-    double x1, y1, x2, y2; /* first and second point of the line segment */
-    double width;        /* rectangle width */
-    double x, y;         /* center of the rectangle */
-    double theta;        /* angle */
-    double dx, dy;       /* vector with the line segment angle */
-    double prec;         /* tolerance angle */
-    double p;            /* probability of a point with angle within 'prec' */
-};
-
 /*----------------------------------------------------------------------------*/
 /** Copy one rectangle structure to another.
  */
@@ -1578,7 +1560,7 @@ static void region2rect( struct point *reg, int reg_size,
     rec->dy = dy;
     rec->prec = prec;
     rec->p = p;
-
+    rec->length =  l_max - l_min;
     /* we impose a minimal width of one pixel
 
        A sharp horizontal or vertical step would produce a perfectly
@@ -1587,6 +1569,7 @@ static void region2rect( struct point *reg, int reg_size,
        the image.
      */
     if ( rec->width < 1.0 ) rec->width = 1.0;
+    if ( rec->length < 1.0 ) rec->length = 1.0;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1925,7 +1908,8 @@ static int refine( struct point *reg, int *reg_size, image_double modgrad,
 /*----------------------------------------------------------------------------*/
 /** LSD full interface.
  */
-ntuple_list LineSegmentDetection( image_double image, double scale,
+//ntuple_list LineSegmentDetection( image_double image, double scale,
+vector<rect> LineSegmentDetection( image_double image, double scale,
                                   double sigma_scale, double quant,
                                   double ang_th, double eps, double density_th,
                                   int n_bins, double max_grad,
@@ -1936,7 +1920,9 @@ ntuple_list LineSegmentDetection( image_double image, double scale,
     image_char used;
     struct coorlist *list_p;
     void *mem_p;
-    struct rect rec;
+    //struct rect rec;
+    rect rec;
+    vector<rect> rect_list;
     struct point *reg;
     int reg_size, min_reg_size, i;
     unsigned int xsize, ysize;
@@ -2041,9 +2027,9 @@ ntuple_list LineSegmentDetection( image_double image, double scale,
                 rec.x2 /= scale; rec.y2 /= scale;
                 rec.width /= scale;
             }
-
+            rect_list.push_back(rec);
             /* add line segment found to output */
-            add_5tuple(out, rec.x1, rec.y1, rec.x2, rec.y2, rec.width);
+           // add_5tuple(out, rec.x1, rec.y1, rec.x2, rec.y2, rec.width);
 
             /* add region number to 'region' image if needed */
             if ( region != NULL )
@@ -2059,13 +2045,15 @@ ntuple_list LineSegmentDetection( image_double image, double scale,
     free( (void *) reg );
     free( (void *) mem_p );
 
-    return out;
+    //return out;
+    return rect_list;
 }
 
 /*----------------------------------------------------------------------------*/
 /** LSD Simple Interface with Scale.
  */
-ntuple_list lsd_scale(image_double image, double scale)
+//ntuple_list lsd_scale(image_double image, double scale)
+vector<rect> lsd_scale(image_double image, double scale)
 {
     /* LSD parameters */
     double sigma_scale = 0.6; /* Sigma for Gaussian filter is computed as
@@ -2089,7 +2077,8 @@ ntuple_list lsd_scale(image_double image, double scale)
 /*----------------------------------------------------------------------------*/
 /** LSD Simple Interface.
  */
-ntuple_list lsd(image_double image)
+//ntuple_list lsd(image_double image)
+vector<rect> lsd(image_double image)
 {
     /* LSD parameters */
     double scale = 0.8;       /* Scale the image by Gaussian filter to 'scale'. */

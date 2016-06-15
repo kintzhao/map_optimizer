@@ -7,6 +7,8 @@
 #IncludeRegexTransform: 
 
 ../include/lsd.h
+vector
+-
 
 /home/yhzhao/temp/LSD-OpenCV-MATLAB/opencv/lsd_opencv_example.cpp
 opencv2/opencv.hpp

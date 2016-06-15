@@ -27,7 +27,8 @@
 /*----------------------------------------------------------------------------*/
 #ifndef LSD_HEADER
 #define LSD_HEADER
-
+#include <vector>
+using namespace std;
 /*----------------------------------------------------------------------------*/
 /*----------------------- 'list of n-tuple' data type ------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -58,6 +59,28 @@ typedef struct ntuple_list_s
     unsigned int dim;
     double *values;
 } *ntuple_list;
+
+
+/*----------------------------------------------------------------------------*/
+/*--------------------------- Rectangle structure ----------------------------*/
+/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
+/** Rectangle structure: line segment with width.
+ */
+
+typedef struct rect
+{
+    double x1, y1, x2, y2; /* first and second point of the line segment */
+    double width;        /* rectangle width */
+    double x, y;         /* center of the rectangle */
+    double theta;        /* angle */
+    double dx, dy;       /* vector with the line segment angle */
+    double prec;         /* tolerance angle */
+    double p;            /* probability of a point with angle within 'prec' */
+    double length;
+} rect;
+
 
 void free_ntuple_list(ntuple_list in);
 ntuple_list new_ntuple_list(unsigned int dim);
@@ -210,7 +233,8 @@ image_double new_image_double_ini( unsigned int xsize, unsigned int ysize,
                        for a line segment from (x1,y1) to (x2,y2) and
                        a width 'width'.
  */
-ntuple_list LineSegmentDetection( image_double image, double scale,
+//ntuple_list LineSegmentDetection( image_double image, double scale,
+vector<rect> LineSegmentDetection( image_double image, double scale,
                                   double sigma_scale, double quant,
                                   double ang_th, double eps, double density_th,
                                   int n_bins, double max_grad,
@@ -232,8 +256,8 @@ ntuple_list LineSegmentDetection( image_double image, double scale,
 
     @return a 5-tuple list of detected line segments.
  */
-ntuple_list lsd_scale(image_double image, double scale);
-
+//ntuple_list lsd_scale(image_double image, double scale);
+vector<rect> lsd_scale(image_double image, double scale);
 /*----------------------------------------------------------------------------*/
 /* LSD Simple Interface                                                       */
 /*----------------------------------------------------------------------------*/
@@ -243,7 +267,7 @@ ntuple_list lsd_scale(image_double image, double scale);
 
     @return a 5-tuple list of detected line segments.
  */
-ntuple_list lsd(image_double image);
+vector<rect> lsd(image_double image);
 
 #endif /* !LSD_HEADER */
 /*----------------------------------------------------------------------------*/
