@@ -133,7 +133,7 @@ void free_image_int(image_int i);
 image_int new_image_int(unsigned int xsize, unsigned int ysize);
 image_int new_image_int_ini( unsigned int xsize, unsigned int ysize,
                              int fill_value );
-
+void normalAngle(double& angle );
 /*----------------------------------------------------------------------------*/
 /** double image data type
 

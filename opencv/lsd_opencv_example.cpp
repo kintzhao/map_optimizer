@@ -57,6 +57,7 @@ void lineEquation(const oneLine line, float& A, float& B, float& C);
 int distanceTwoLine(oneLine line1, oneLine line2);
 string int2str(int num);
 bool imgProcess(vector<rect>& lines, Mat img);
+bool imgProcess2(vector<rect>& lines, Mat img);
 int distanceTwoRect(rect rec1, rect rec2);
 bool displayRect(const vector<rect> lines, Mat& display);
 
@@ -278,6 +279,18 @@ bool linkPoint2(linePoinits& lines, Mat img)
     imshow("display",display);
     imshow("result",result);
 }
+/**
+ * @brief imgProcess
+ * img_test :--------
+ * r current_i     display
+ * g img_j    dele       : width
+ * b img_i  ==dele  :width<=2 and length <6
+ *
+ *
+ * @param lines
+ * @param img
+ * @return
+ */
 bool imgProcess(vector<rect>& lines, Mat img)
 {
     //imshow("raw",img);
@@ -290,10 +303,11 @@ bool imgProcess(vector<rect>& lines, Mat img)
     {
 
         rect current_line = lines.at(i);
+        cout<<" current_theta: "<<current_line.theta<<endl;
         if(current_line.width<=2 | current_line.length <10)
         {
             lines.erase(lines.begin()+i);
-            cv::line(display_test, Point(current_line.x1, current_line.y1), Point(current_line.x2, current_line.y2), cv::Scalar(255), 1/*current_line.width*/ , CV_AA);//lines.width.at(j)
+            cv::line(display_test, Point(current_line.x1, current_line.y1), Point(current_line.x2, current_line.y2), CV_RGB(0,0,255), 1/*current_line.width*/ , CV_AA);//lines.width.at(j)
 
             i=i-1;
             continue;
@@ -308,12 +322,12 @@ bool imgProcess(vector<rect>& lines, Mat img)
             int min_distance = distanceTwoRect(current_line, temp_line);
             int min_center_distance = lengthTwoPoint(Point(current_line.x, current_line.y), Point(temp_line.x, temp_line.y));
             //cout<<" min_distance  "<<min_distance<<" min_center_distance "<<min_center_distance<<endl;
-            if( min_distance < (current_line.width + temp_line.width) && min_center_distance < (current_line.width + temp_line.width)  /*abs(current_line.theta - temp_line.theta) < 20.0*3.14/180*/)
+            if( min_distance < (current_line.width + temp_line.width) && min_center_distance < (current_line.width + temp_line.width)*1.5 && abs(current_line.theta - temp_line.theta) < 50.0*3.14/180 )
             {
                 // cout<<" min_distance  "<<min_distance<<endl;
                 near_lines.push_back(temp_line);
 
-                cv::line(display_test, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), cv::Scalar(255), 1/*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                cv::line(display_test, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,255,0), 1/*temp_line.width*/ , CV_AA);//lines.width.at(j)
 
                 lines.erase(lines.begin()+j);
                 j--;
@@ -365,6 +379,8 @@ bool imgProcess(vector<rect>& lines, Mat img)
         //       // lines.at(i).p = p;
         //        lines.at(i).length =  l_max + l_min;
 
+        cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(255,0,0), 1/*temp_line.width*/ , CV_AA);//lines.width.at(j)
+
         if(current_line.theta <= M_PI/2.0)
         {
             int length = lengthTwoPoint(Point(min_x,min_y), Point(max_x, max_y)) ;
@@ -390,7 +406,13 @@ bool imgProcess(vector<rect>& lines, Mat img)
         static int c = 0;
         rect temp_line = lines.at(j);
         // if(c%50 ==2)
-        cv::line(display, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), cv::Scalar(255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+        if(temp_line.length > 20)
+        {
+        cv::line(display, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+
+//        if(j%20 == 5)  //no order
+//            cv::putText(display,int2str(j),cvPoint(temp_line.x-1,temp_line.y-1),
+//                        CV_FONT_HERSHEY_COMPLEX, 1, CV_RGB(255, 0, 0) );
 
         //        rectangle(display, cvPoint(temp_line.x1-1, temp_line.y1-1),
         //                  cvPoint(temp_line.x1+1, temp_line.y1+1),
@@ -403,10 +425,102 @@ bool imgProcess(vector<rect>& lines, Mat img)
         //                  cvPoint(temp_line.x2,temp_line.y2),
         //                  CV_RGB(255,0,0),1,8);       // 画矩形点
         c++;
+        }
     }
     imshow("display",display);
     imshow("display_test",display_test);
 }
+
+bool imgProcess2(vector<rect>& lines, Mat img)
+{
+    Mat display, display_test;
+    img.copyTo(display);
+    img.copyTo(display_test);
+    vector<rect> near_lines;
+    cout<<" lines.size()  "<<lines.size()<<endl;
+    for (int i = 0; i != lines.size(); ++i)
+    {
+        rect current_line = lines.at(i);
+        cout<<" current_theta: "<<current_line.theta<<endl;
+        if(current_line.width<=2 | current_line.length <10)
+        {
+            lines.erase(lines.begin()+i);
+            cv::line(display_test, Point(current_line.x1, current_line.y1), Point(current_line.x2, current_line.y2), CV_RGB(0,0,255), 1/*current_line.width*/ , CV_AA);//lines.width.at(j)
+            i=i-1;
+            continue;
+        }
+        near_lines.clear();
+        near_lines.push_back(current_line);
+        for(int j=i+1; j!= lines.size(); ++j)
+        {
+            //if(i == j) continue ;
+            rect temp_line = lines.at(j);
+            int min_distance = distanceTwoRect(current_line, temp_line);
+            int min_center_distance = lengthTwoPoint(Point(current_line.x, current_line.y), Point(temp_line.x, temp_line.y));
+            //cout<<" min_distance  "<<min_distance<<" min_center_distance "<<min_center_distance<<endl;
+            if( min_distance < (current_line.width + temp_line.width) && min_center_distance < (current_line.width + temp_line.width)*1.5 && abs(current_line.theta - temp_line.theta) < 50.0*3.14/180 )
+            {
+                // cout<<" min_distance  "<<min_distance<<endl;
+                near_lines.push_back(temp_line);
+                cv::line(display_test, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,255,0), 1/*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                lines.erase(lines.begin()+j);
+                j--;
+            }
+        }
+        int min_x = 1000, min_y = 10000, max_x = 0, max_y = 0;
+        for(int k =0; k!= near_lines.size(); ++k)
+        {
+            if ( near_lines.at(k).x1 > max_x ) max_x = near_lines.at(k).x1;
+            if ( near_lines.at(k).x2 > max_x ) max_x = near_lines.at(k).x2;
+
+            if ( near_lines.at(k).x1 < min_x ) min_x = near_lines.at(k).x1;
+            if ( near_lines.at(k).x2 < min_x ) min_x = near_lines.at(k).x2;
+
+            if ( near_lines.at(k).y1 > max_y ) max_y = near_lines.at(k).y1;
+            if ( near_lines.at(k).y2 > max_y ) max_y = near_lines.at(k).y2;
+
+            if ( near_lines.at(k).y1 < min_y ) min_y = near_lines.at(k).y1;
+            if ( near_lines.at(k).y2 < min_y ) min_y = near_lines.at(k).y2;
+        }
+        cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(255,0,0), 1/*temp_line.width*/ , CV_AA);//lines.width.at(j)
+        if(current_line.theta <= M_PI/2.0)
+        {
+            int length = lengthTwoPoint(Point(min_x,min_y), Point(max_x, max_y)) ;
+            lines.at(i).x1 = min_x;//-1;
+            lines.at(i).x2 = max_x;//+1;
+            lines.at(i).y1 = min_y;//-1;
+            lines.at(i).y2 = max_y;//+1;
+            lines.at(i).length = length;
+        }
+        else{
+            int length = lengthTwoPoint(Point(min_x,max_y), Point(max_x, min_y)) ;
+            lines.at(i).x1 = min_x;//-1;
+            lines.at(i).x2 = max_x;//+1;
+            lines.at(i).y1 = max_y;//+1;
+            lines.at(i).y2 = min_y;//-1;
+            lines.at(i).length = length;
+        }
+    }
+
+    cout<<" lines.size()  "<<lines.size()<<endl;
+    for (int j = 0; j < lines.size(); j++)
+    {
+        rect temp_line = lines.at(j);
+        cv::line(display, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+//            cv::putText(display,int2str(j),cvPoint(temp_line.x-1,temp_line.y-1),
+//                        CV_FONT_HERSHEY_COMPLEX, 1, CV_RGB(255, 0, 0) );
+        //        rectangle(display, cvPoint(temp_line.x1-1, temp_line.y1-1),
+        //                  cvPoint(temp_line.x1+1, temp_line.y1+1),
+        //                  CV_RGB(0,255,0),1,8);       // 画矩形点
+        //        rectangle(display, cvPoint(temp_line.x2-1,temp_line.y2-1),
+        //                  cvPoint(temp_line.x2+1,temp_line.y2+1),
+        //                  CV_RGB(255,0,0),1,8);       // 画矩形点
+    }
+    imshow("display",display);
+    imshow("display_test",display_test);
+}
+
+
 bool showLinkImg(const linePoinits lines, Mat display)
 {
     for (int j = 0; j < lines.count-50 ; j++)

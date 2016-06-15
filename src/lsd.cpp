@@ -2027,6 +2027,7 @@ vector<rect> LineSegmentDetection( image_double image, double scale,
                 rec.x2 /= scale; rec.y2 /= scale;
                 rec.width /= scale;
             }
+            normalAngle(rec.theta);
             rect_list.push_back(rec);
             /* add line segment found to output */
            // add_5tuple(out, rec.x1, rec.y1, rec.x2, rec.y2, rec.width);
@@ -2048,7 +2049,14 @@ vector<rect> LineSegmentDetection( image_double image, double scale,
     //return out;
     return rect_list;
 }
+void normalAngle(double& angle )
+{
+    while(angle > M_PI)
+        angle -= M_PI;
 
+    while(angle < 0)
+        angle += M_PI;
+}
 /*----------------------------------------------------------------------------*/
 /** LSD Simple Interface with Scale.
  */
