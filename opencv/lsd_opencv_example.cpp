@@ -89,7 +89,30 @@ int isInRectangle(squareness rec, Point2d p1, Point2d p2, float rect_width);
 bool extendLink(int state, squareness rec, Point2d &p1, Point2d &p2);
 bool extendRect(squareness &rec, Point2d p);
 bool getLineFromRect(squareness rec, Point2d &start, Point2d &end);
+Point2d findNearPoint(rect current_line, Point2d end);
+string float2str(float num);
 
+bool creatNewLine( rect& rec, Point2d start,Point2d  end)
+{
+    rec.x1 = start.x;
+    rec.x2 = end.x;
+    rec.y1 = start.y;
+    rec.y2 = end.y;
+    rec.x = (start.x + end.x)/2;
+    rec.y = (start.y + end.y)/2;
+    rec.theta = atan2(end.y - start.y, end.x - start.x);
+}
+
+Point2d findNearPoint(rect current_line, Point2d end)
+{
+   int  length1, length2;
+   length1 = lengthTwoPoint(Point2d(current_line.x1,current_line.y1), end );
+   length2 = lengthTwoPoint(Point2d(current_line.x2,current_line.y2), end );
+   if(length1 <= length2)
+       return Point2d(current_line.x1,current_line.y1);
+   else
+       return Point2d(current_line.x2,current_line.y2);
+}
 
 bool extendLink(int state, squareness rec, Point2d& p1, Point2d& p2)
 {
@@ -153,38 +176,38 @@ bool extendLink(int state, squareness rec, Point2d& p1, Point2d& p2)
 
 bool extendRect(squareness& rec, Point2d p)
 {
-    if(rec.direct) //y
-    {
-        if(p.y > rec.max_y)
-            rec.max_y = p.y;
-        else if( p.y < rec.min_y)
-            rec.min_y = p.y;
-   }
-    else //x
-    {
+//    if(rec.direct) //y
+//    {
+//        if(p.y > rec.max_y)
+//            rec.max_y = p.y;
+//        else if( p.y < rec.min_y)
+//            rec.min_y = p.y;
+//   }
+//    else //x
+//    {
         if(p.x > rec.max_x)
             rec.max_x = p.x;
         else if( p.x < rec.min_x)
             rec.min_x = p.x;
-    }
+//    }
 
 }
 bool getLineFromRect(squareness rec, Point2d& start, Point2d& end)
 {
-    if(rec.direct)
-    {
-        start.x = (rec.min_x + rec.max_x)/2;
-        end.x = (rec.min_x + rec.max_x)/2;
-        start.y = rec.min_y;
-        end.y = rec.max_y;
-    }
-    else
-    {
+//    if(rec.direct)
+//    {
+//        start.x = (rec.min_x + rec.max_x)/2;
+//        end.x = (rec.min_x + rec.max_x)/2;
+//        start.y = rec.min_y;
+//        end.y = rec.max_y;
+//    }
+//    else
+//    {
         start.x = rec.min_x;
         end.x = rec.max_x;
         start.y = (rec.min_y + rec.max_y)/2;
         end.y = (rec.min_y + rec.max_y)/2;
-    }
+//    }
 }
 /**
  * @brief isInRectangle
@@ -705,7 +728,7 @@ vector<rect> sortRect(vector<rect>& lines)
         if(lines.at(start->order).width > 2 | lines.at(start->order).length > 10)
         {
             rec_lines.push_back(lines.at(start->order));
-            cout<<"  "<< lines.at(start->order).length<<"   ";
+           // cout<<"  "<< lines.at(start->order).length<<"   ";
         }
     }
     lines.clear();
@@ -728,10 +751,18 @@ bool imgProcess2(vector<rect>& lines, Mat img)
     cout<<" sortRect brfore size()  "<<lines.size()<<endl;
     lines = sortRect(lines);
     cout<<" sortRect after size()   "<<lines.size()<<endl;
-    const float angle_thr = 10*M_PI/180;
+    const float angle_thr = 5*M_PI/180;
     float rect_width ;
-    for (int i = 0; i != lines.size(); ++i)
+    vector<bool> seen(lines.size(), false);
+
+    int raw_lines_num = lines.size();
+    //for (int i = 0; i < lines.size(); ++i)
+    for (int i = 0; i < raw_lines_num; ++i)
     {
+        Mat test, test2;
+        img.copyTo(test);
+        img.copyTo(test2);
+        if(seen[i]) continue;
         Scalar color = CV_RGB(rand()&255, rand()&255, rand()&255);// = random_color();
         rect current_line = lines.at(i);
        // cout<<" current_theta: "<<current_line.theta<<endl;
@@ -740,22 +771,30 @@ bool imgProcess2(vector<rect>& lines, Mat img)
 
        // cv::line(display_test, Point(current_line.x1, current_line.y1), Point(current_line.x2, current_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/,CV_AA);//lines.width.at(j)
 
+        cv::line(test, Point(current_line.x1, current_line.y1), Point(current_line.x2, current_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/,CV_AA);//lines.width.at(j)
+
+
         Point2d start = rotatePoint(Point(current_line.x1, current_line.y1), current_line.theta, Point2d(current_line.x, current_line.y));
         Point2d end = rotatePoint(Point(current_line.x2, current_line.y2), current_line.theta, Point2d(current_line.x, current_line.y));
         squareness rec = getRectangle(start,end);
         rec.direct = (rec.max_x - rec.min_x) >= (rec.max_y - rec.min_y) ? 0:1 ; // 0 == x   ; 1==> y
+//        cout<<"direct"<<rec.direct<<" ";
+        rectangle(display_test, rotatePointRever(Point(rec.min_x, rec.min_y),current_line.theta, Point2d(current_line.x, current_line.y)),
+                  rotatePointRever(Point(rec.max_x, rec.max_y),current_line.theta, Point2d(current_line.x, current_line.y)),
+                  CV_RGB(255,0,0),1,8);       // 画矩形点
 
-//        rectangle(display_test, cvPoint(rec.min_x, rec.min_y),
-//                  cvPoint(rec.max_x, rec.max_y),
-//                  CV_RGB(255,0,0),1,8);       // 画矩形点
+        rectangle(test, rotatePointRever(Point(rec.min_x, rec.min_y),current_line.theta, Point2d(current_line.x, current_line.y)),
+                  rotatePointRever(Point(rec.max_x, rec.max_y),current_line.theta, Point2d(current_line.x, current_line.y)),
+                  CV_RGB(255,0,0),1,8);       // 画矩形点
 
-
-        for(int j=i+1; j!= lines.size(); j++)
+       // for(int j=i+1; j< lines.size(); j++)
+        for(int j=i+1; j< raw_lines_num; j++)
         {
             if(i == j) continue ;
+            if(seen[j] == true) continue;
             rect temp_line = lines.at(j);
             if(current_line.length < temp_line.length) continue;
-            if(normDiffAngle(current_line.theta, temp_line.theta) < angle_thr)//parallel
+            if(normDiffAngle(current_line.theta, temp_line.theta) < angle_thr)//parallel lines
             {
 //test
 //                Point2d p1 = rotatePoint(Point2d(3,3),  -45*M_PI/180,  Point2d(2, 2));
@@ -780,6 +819,7 @@ bool imgProcess2(vector<rect>& lines, Mat img)
                    break;
 
                case 1:
+                    cout<<" i "<<i<<" state= "<<state<<" "<<" j= "<<j<<endl;
                     extendRect(rec, p2);
                     getLineFromRect(rec, start, end);
 
@@ -788,18 +828,23 @@ bool imgProcess2(vector<rect>& lines, Mat img)
                     lines.at(i).y1 = rot_point_temp.y;
 
                     rot_point_temp = rotatePointRever(end, current_line.theta, Point2d(current_line.x, current_line.y));
-                    lines.at(i).x1 = rot_point_temp.x;
-                    lines.at(i).y1 = rot_point_temp.y;
+                    lines.at(i).x2 = rot_point_temp.x;
+                    lines.at(i).y2 = rot_point_temp.y;
+
+                    cv::line(test, Point(lines.at(j).x1, lines.at(j).y1), Point(lines.at(j).x2, lines.at(j).y2), CV_RGB(255,0,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                    cv::putText(test,int2str(j),Point(temp_line.x1, temp_line.y1),
+                                CV_FONT_HERSHEY_COMPLEX, 1, CV_RGB(255, 0, 0) );
 
                     cv::line(display_test_before, Point(lines.at(j).x1, lines.at(j).y1), Point(lines.at(j).x2, lines.at(j).y2), CV_RGB(255,0,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
-                    lines.erase(lines.begin() + j);
+                    //lines.erase(lines.begin() + j);
+                    seen[j] = true;
                     cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(255,0,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
-                    j--;
+                    //j--;
                     break;
 
                case 2:
-
-                   extendRect(rec, p1);
+                    cout<<" i "<<i<<" state= "<<state<<" "<<" j= "<<j<<endl;
+                    extendRect(rec, p1);
                    getLineFromRect(rec, start, end);
 
                    rot_point_temp = rotatePointRever(start, current_line.theta, Point2d(current_line.x, current_line.y));
@@ -807,22 +852,31 @@ bool imgProcess2(vector<rect>& lines, Mat img)
                    lines.at(i).y1 = rot_point_temp.y;
 
                    rot_point_temp = rotatePointRever(end, current_line.theta, Point2d(current_line.x, current_line.y));
-                   lines.at(i).x1 = rot_point_temp.x;
-                   lines.at(i).y1 = rot_point_temp.y;
+                   lines.at(i).x2 = rot_point_temp.x;
+                   lines.at(i).y2 = rot_point_temp.y;
+
+                   cv::line(test, Point(lines.at(j).x1, lines.at(j).y1), Point(lines.at(j).x2, lines.at(j).y2), CV_RGB(0,255,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                   cv::putText(test,int2str(j),Point(temp_line.x1, temp_line.y1),
+                               CV_FONT_HERSHEY_COMPLEX, 1, CV_RGB(0,255, 0) );
 
                    cv::line(display_test_before, Point(lines.at(j).x1, lines.at(j).y1), Point(lines.at(j).x2, lines.at(j).y2), CV_RGB(0,255,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
-                   lines.erase(lines.begin() + j);
+                   //lines.erase(lines.begin() + j);
+                   seen[j] = true;
                    cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(0,255,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
-                   j--;
+                  // j--;
                    break;
 
                case 3:
+                    cout<<" i "<<i<<" state= "<<state<<" "<<" j= "<<j<<endl;
+                    //lines.erase(lines.begin() + j);
+                   seen[j] = true;
+                   cv::line(test, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                   cv::putText(test,int2str(j),Point(temp_line.x1, temp_line.y1),
+                               CV_FONT_HERSHEY_COMPLEX, 1, CV_RGB( 0, 0,255) );
 
-                   lines.erase(lines.begin() + j);
                    cv::line(display_test_before, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
                    cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
-
-                   j--;
+                   //j--;
                    break;
                }
 //               if(i==3)
@@ -838,27 +892,84 @@ bool imgProcess2(vector<rect>& lines, Mat img)
 
 
             }
-            else //across
+            else //across lines
             {
+                Point2d p1 = rotatePoint(Point2d(temp_line.x1, temp_line.y1), current_line.theta, Point2d(current_line.x, current_line.y));
+                Point2d p2 = rotatePoint(Point2d(temp_line.x2, temp_line.y2), current_line.theta, Point2d(current_line.x, current_line.y));
+                rect_width = (current_line.width + temp_line.width);
 
-             ;
+                int state = isInRectangle(rec, p1, p2, rect_width);
+                Point2d start, end;
+                rect  new_line(current_line);
+                switch(state)
+                {
+                case 0:
+                    continue;
+                    break;
+
+                case 1:
+                    start = findNearPoint(current_line, Point2d(temp_line.x1, temp_line.y1)); //
+                    end =  Point2d(temp_line.x1, temp_line.y1);
+
+                    creatNewLine( new_line, start, end);
+
+                    seen.push_back(false);
+                    lines.push_back(new_line);
+
+                     cv::line(display_test_before, Point(lines.at(j).x1, lines.at(j).y1), Point(lines.at(j).x2, lines.at(j).y2), CV_RGB(255,0,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                     cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(255,0,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                     break;
+
+                case 2:
+                   start = findNearPoint(current_line, Point2d(temp_line.x2, temp_line.y2)); //
+                   end =  Point2d(temp_line.x2, temp_line.y2);
+
+                   creatNewLine( new_line, start, end);
+
+                   seen.push_back(false);
+                   lines.push_back(new_line);
+
+                    cv::line(display_test_before, Point(lines.at(j).x1, lines.at(j).y1), Point(lines.at(j).x2, lines.at(j).y2), CV_RGB(255,0,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                    cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(255,0,0),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                    break;
+
+                case 3:
+                    seen[j] = true;
+
+                    cv::line(display_test_before, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                    cv::line(display_test, Point(lines.at(i).x1, lines.at(i).y1), Point(lines.at(i).x2, lines.at(i).y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+                    break;
+                }
+
             }
 
         }
-      //  if(i%10 == 2){
-        imshow("display_test",display_test);
-        cv::waitKey(5);
-      //  }
-     }
+       // string txt = "./temp/"+ int2str(i)+".png";
+       // imwrite(txt, test);
+//        imshow("display_test",display_test);
+//        cv::waitKey(5);
+        //string txt2 = "./display/"+ int2str(i)+".png";
+       // imwrite(txt2, test2);
 
+     }
+    cout<<"----------------------- "<<endl;
     cout<<" lines.size()  "<<lines.size()<<endl;
+    int seen_false = 0;
     for (int j = 0; j < lines.size(); j++)
     {
+        cout<<" j "<<j<<" "<<seen[j]<<" "<<endl;
+        if(!seen[j])
+        {
+            seen_false++;
         rect temp_line = lines.at(j);
-        cv::line(display, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,0,255),1 /*temp_line.width*/ , CV_AA);//lines.width.at(j)
+        cv::line(display, Point(temp_line.x1, temp_line.y1), Point(temp_line.x2, temp_line.y2), CV_RGB(0,0,255),temp_line.width , CV_AA);//lines.width.at(j)
+           }
     }
+    cout<<"have valid line: "<<seen_false<<endl;
     imshow("display",display);
     imshow("display_test",display_test);
+    string name = "./default/" + int2str((int)(angle_thr *180/M_PI + 0.9)) + "-" + int2str(rand()&65535) + ".png";
+    imwrite( name, display);
     imshow("display_test_before",display_test_before);
 }
 
@@ -878,6 +989,7 @@ bool showLinkImg(const linePoinits lines, Mat display)
     }
     imshow("linklines",display);
 }
+
 bool displayRect(const vector<rect> lines, Mat& display)
 {
     for (int j = 0; j < lines.size(); j++)
@@ -1072,8 +1184,6 @@ int main(int argc, char **argv)
         }
     }
 
-    linePoinits lsd_lines;
-    int valid_line_num = 0;
     Mat img_64fc1;
     newImg.convertTo(img_64fc1, CV_64FC1);
 
@@ -1572,6 +1682,13 @@ bool linkPoint3(linePoinits& lines, Mat img)
 }
 
 string int2str(int num)
+{
+    std::stringstream ss;
+    ss << num;
+    return ss.str();
+}
+
+string float2str(float num)
 {
     std::stringstream ss;
     ss << num;

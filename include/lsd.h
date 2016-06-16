@@ -71,6 +71,7 @@ typedef struct ntuple_list_s
 
 typedef struct rect
 {
+public:
     double x1, y1, x2, y2; /* first and second point of the line segment */
     double width;        /* rectangle width */
     double x, y;         /* center of the rectangle */
@@ -79,6 +80,22 @@ typedef struct rect
     double prec;         /* tolerance angle */
     double p;            /* probability of a point with angle within 'prec' */
     double length;
+    rect(const rect& new_line)
+    {
+      x1 = new_line.x1;
+      y1 = new_line.y1;
+      x2 = new_line.x2;
+      y2 = new_line.y2;
+      x = new_line.x;
+      y = new_line.y;
+      width = new_line.width;
+      dx = new_line.dx;
+      dy = new_line.dy;
+      prec = new_line.prec;
+      length = new_line.length;
+      theta = new_line.theta;
+    }
+    rect(){;}
 } rect;
 
 
